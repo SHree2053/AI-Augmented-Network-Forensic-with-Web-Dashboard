@@ -1,0 +1,90 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Packet Search{% endblock %}
+{% block page_title %}Packet Search{% endblock %}
+{% block subtitle %}Search through captured network packets{% endblock %}
+
+{% block content %}
+<div class="dash-card">
+    <div class="row g-2 mb-3">
+        <div class="col-md-4">
+            <input type="text" id="searchsource" class="form-control form-control-sm" placeholder="Source IP" style="background:var(--input-bg);color:var(--text-primary);border:1px solid var(--border-soft);border-radius:8px;font-family:var(--font-mono);">
+        </div>
+        <div class="col-md-4">
+            <input type="text" id="searchdestination" class="form-control form-control-sm" placeholder="Destination IP" style="background:var(--input-bg);color:var(--text-primary);border:1px solid var(--border-soft);border-radius:8px;font-family:var(--font-mono);">
+        </div>
+        <div class="col-md-2">
+            <select id="searchprotocol" class="form-select form-select-sm" style="background:var(--input-bg);color:var(--text-primary);border:1px solid var(--border-soft);border-radius:8px;">
+                <option value="">All</option>
+                <option value="TCP">TCP</option>
+                <option value="UDP">UDP</option>
+                <option value="ICMP">ICMP</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button id="searchbutton" class="btn btn-refresh btn-sm w-100"><i class="fas fa-search"></i> Search</button>
+        </div>
+    </div>
+    <div id="searchResults">
+        <div class="text-center text-muted py-4" style="font-size:0.85rem;"><i class="fas fa-search me-2"></i>Enter search criteria above.</div>
+    </div>
+</div>
+
+
+
+<!-- scripting tags for functioning -->
+<script>
+    // adding a click evvent listernt for searching
+
+document.getElementById('searchbutton').addEventListener('click', function() {
+     
+    // removing extra spaces from the user 
+    const source = document.getElementById('searchsource').value.trim();
+    const destination = document.getElementById('searchdestination').value.trim();
+    const protocol = document.getElementById('searchprotocol').value;
+    
+    // getting searchresults for displaying
+    const results = document.getElementById('searchResults');
+
+    // presenting loading page
+    results.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Searching...</div>';
+
+    // Building the API URL with query parameters
+    let url = '/api/ip-details/search/?';
+    if (source) url += `source=${encodeURIComponent(source)}&`;   // this helps to add source ip paremater
+    if (destination) url += `destination=${encodeURIComponent(destination)}&`;   // this helps to add destination ip paremater
+    if (protocol) url += `protocol=${encodeURIComponent(protocol)}&`;     // adding protocol if selected
+
+    // Remove the trailing '&' from the URL if present
+    if (url.endsWith('&')) url = url.slice(0, -1);
+
+    fetch(url)    // Sending a GET request to the search API
+        .then(r => r.json())   // Converting the response to JSON
+        .then(data => {      // Processing for the returned data
+            if (data.events && data.events.length > 0) { // Check if any events were returned
+                results.innerHTML = data.events.map(e => `
+                    <div class="traffic-item" style="display:flex;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);gap:10px;font-size:0.8rem;">
+                        <span style="font-family:var(--font-mono);color:var(--text-muted);font-size:0.7rem;">${e.timestamp}</span>
+                        <span style="font-family:var(--font-mono);color:var(--cyan);">${e.source}</span>
+                        <span style="color:var(--text-muted);">→</span>
+                        <span style="font-family:var(--font-mono);color:var(--text-secondary);">${e.destination}</span>
+                        <span class="protocol-badge" style="background:rgba(6,182,212,0.12);color:var(--cyan);font-size:0.65rem;">${e.protocol}</span>
+                        ${e.is_anomaly ? '<span class="badge bg-danger">ATTACK</span>' : '<span class="badge bg-success">NORMAL</span>'}
+                    </div>
+                `).join('');
+            } else {
+                results.innerHTML = '<div class="text-center text-muted py-4" style="font-size:0.85rem;"><i class="fas fa-inbox me-2"></i>No results found.</div>';
+            }
+        })
+         // Handling the errors during request
+        .catch(err => {    
+            results.innerHTML = '<div class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle me-2"></i>Error loading results.</div>';
+            // Show a toast notification if the function exists
+            if (typeof showToast === 'function') { 
+                showToast('Error', err.message || 'Failed to fetch data.', 'danger');
+            } else {
+                console.error('Search error:', err);  // showing error on the brower console
+            }
+        });
+});
+</script>
+{% endblock %}

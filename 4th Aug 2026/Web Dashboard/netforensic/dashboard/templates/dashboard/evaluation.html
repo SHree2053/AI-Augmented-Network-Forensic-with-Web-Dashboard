@@ -1,0 +1,114 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Model Evaluation{% endblock %}
+{% block page_title %}Model Evaluation{% endblock %}
+{% block subtitle %}Performance on test dataset ({{ test_samples|default:"N/A" }} samples){% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left: Confusion Matrix -->
+    <div class="col-md-6">
+        <div class="dash-card">
+            <h6 class="fw-bold mb-3" style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px;">
+                <i class="fas fa-table me-2" style="color: var(--cyan);"></i>Confusion Matrix (Test Set)
+            </h6>
+            <div class="confusion-matrix" style="display:grid;grid-template-columns:100px 1fr 1fr;grid-template-rows:40px 1fr 1fr;gap:2px;max-width:500px;margin:0 auto;">
+                <div class="cell corner"></div>
+                <div class="cell cell-header" style="background:transparent;color:var(--text-muted);font-size:0.6rem;text-transform:uppercase;display:flex;align-items:center;justify-content:center;">Predicted Normal</div>
+                <div class="cell cell-header" style="background:transparent;color:var(--text-muted);font-size:0.6rem;text-transform:uppercase;display:flex;align-items:center;justify-content:center;">Predicted Attack</div>
+
+                <div class="cell cell-header" style="background:transparent;color:var(--text-muted);font-size:0.6rem;text-transform:uppercase;display:flex;align-items:center;justify-content:center;">Actual Normal</div>
+                <div class="cell cell-tn" style="background:rgba(34,197,94,0.12);color:var(--green);border:1px solid rgba(34,197,94,0.2);border-radius:6px;display:flex;align-items:center;justify-content:center;padding:12px;font-weight:700;font-family:var(--font-mono);font-size:0.9rem;">{{ tn|default:"N/A" }}</div>
+                <div class="cell cell-fp" style="background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.2);border-radius:6px;display:flex;align-items:center;justify-content:center;padding:12px;font-weight:700;font-family:var(--font-mono);font-size:0.9rem;">{{ fp|default:"N/A" }}</div>
+
+                <div class="cell cell-header" style="background:transparent;color:var(--text-muted);font-size:0.6rem;text-transform:uppercase;display:flex;align-items:center;justify-content:center;">Actual Attack</div>
+                <div class="cell cell-fn" style="background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.2);border-radius:6px;display:flex;align-items:center;justify-content:center;padding:12px;font-weight:700;font-family:var(--font-mono);font-size:0.9rem;">{{ fn|default:"N/A" }}</div>
+                <div class="cell cell-tp" style="background:rgba(34,197,94,0.12);color:var(--green);border:1px solid rgba(34,197,94,0.2);border-radius:6px;display:flex;align-items:center;justify-content:center;padding:12px;font-weight:700;font-family:var(--font-mono);font-size:0.9rem;">{{ tp|default:"N/A" }}</div>
+            </div>
+            <div class="text-center text-muted small mt-3">
+                <span class="me-3"><span style="color: var(--green);">●</span> Correct</span>
+                <span><span style="color: var(--red);">●</span> Incorrect</span>
+            </div>
+            <div class="row mt-3 g-2">
+                <div class="col-6">
+                    <div class="text-center p-2 rounded" style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.1);">
+                        <div style="font-size: 0.55rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">False Positive Rate</div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--red); font-family: var(--font-mono);">{{ false_positive|default:"N/A" }}</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-center p-2 rounded" style="background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.1);">
+                        <div style="font-size: 0.55rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">True Positive Rate</div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--green); font-family: var(--font-mono);">{{ true_positive|default:"N/A" }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center text-muted small mt-2">
+                <i class="fas fa-database me-1"></i> Total test samples: <strong>{{ test_samples|default:"N/A" }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Key Metrics -->
+    <div class="col-md-6">
+        <div class="dash-card">
+            <h6 class="fw-bold mb-3" style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px;">
+                <i class="fas fa-chart-simple me-2" style="color: var(--cyan);"></i>Key Metrics
+            </h6>
+            <div class="metric-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="metric-item" style="background:rgba(255,255,255,0.03);border-radius:10px;padding:14px;border:1px solid var(--border-soft);text-align:center;">
+                    <div class="label" style="font-size:0.55rem;text-transform:uppercase;color:var(--text-muted);">Accuracy</div>
+                    <div class="value" style="font-size:1.8rem;font-weight:700;font-family:var(--font-mono);color:var(--cyan);">{{ accuracy|default:"N/A" }}</div>
+                </div>
+                <div class="metric-item" style="background:rgba(255,255,255,0.03);border-radius:10px;padding:14px;border:1px solid var(--border-soft);text-align:center;">
+                    <div class="label" style="font-size:0.55rem;text-transform:uppercase;color:var(--text-muted);">Precision</div>
+                    <div class="value" style="font-size:1.8rem;font-weight:700;font-family:var(--font-mono);color:var(--purple);">{{ precision|default:"N/A" }}</div>
+                </div>
+                <div class="metric-item" style="background:rgba(255,255,255,0.03);border-radius:10px;padding:14px;border:1px solid var(--border-soft);text-align:center;">
+                    <div class="label" style="font-size:0.55rem;text-transform:uppercase;color:var(--text-muted);">Recall</div>
+                    <div class="value" style="font-size:1.8rem;font-weight:700;font-family:var(--font-mono);color:var(--amber);">{{ recall|default:"N/A" }}</div>
+                </div>
+                <div class="metric-item" style="background:rgba(255,255,255,0.03);border-radius:10px;padding:14px;border:1px solid var(--border-soft);text-align:center;">
+                    <div class="label" style="font-size:0.55rem;text-transform:uppercase;color:var(--text-muted);">F1-Score</div>
+                    <div class="value" style="font-size:1.8rem;font-weight:700;font-family:var(--font-mono);color:var(--green);">{{ f1|default:"N/A" }}</div>
+                </div>
+            </div>
+
+            <div class="mt-3 p-3 rounded" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-soft);">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">
+                        <i class="fas fa-robot me-1"></i> Model: <strong style="color: var(--text-primary);">{{ model|default:"XGBoost" }}</strong>
+                    </span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">
+                        <i class="fas fa-database me-1"></i> Dataset: <strong style="color: var(--text-primary);">{{ dataset|default:"CICIDS-2017" }}</strong>
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center flex-wrap mt-1">
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">
+                        <i class="fas fa-users me-1"></i> Training: <strong style="color: var(--text-primary);">{{ train_samples|default:"12,000" }}</strong>
+                    </span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">
+                        <i class="fas fa-vial me-1"></i> Test: <strong style="color: var(--text-primary);">{{ test_samples|default:"N/A" }}</strong>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Performance Bar -->
+            <div class="mt-3">
+                {% with acc_clean=accuracy|cut:"%"|default:"N/A" %}
+                <div style="display: flex; height: 28px; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.04);">
+                    <div style="background: var(--gradient-primary); width: {% if acc_clean != 'N/A' %}{{ acc_clean }}%;{% else %}0%;{% endif %} display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.65rem; font-weight: 700; transition: width 0.8s ease;">
+                        {{ acc_clean }}
+                    </div>
+                    <div style="background: rgba(255,255,255,0.04); width: {% if acc_clean != 'N/A' %}{{ 100|add:acc_clean|add:-100 }}%;{% else %}100%;{% endif %} display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.65rem;">
+                        {% if acc_clean != 'N/A' %}{{ 100|add:acc_clean|add:-100 }}%{% else %}N/A{% endif %}
+                    </div>
+                </div>
+                <div class="text-center text-muted small mt-1">
+                    <i class="fas fa-robot me-1"></i> Model: <strong>{{ model|default:"XGBoost" }}</strong> · Accuracy: <strong>{{ accuracy|default:"N/A" }}</strong>
+                </div>
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "dashboard/base.html" %} #extension of the base.html
+{% block title %}Threat Intelligence{% endblock %}  #showing the page title
+{% block page_title %}Threat Intelligence{% endblock %}  #showing the dashboard title
+{% block subtitle %}VirusTotal API{% endblock %}  #used virus total api for context
+
+#content block on django this is stating 
+{% block content %}
+
+<div class="dash-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <!-- it dispalys the total number of uniqure ips which are extractedf rom alert and anamolies-->
+            <span class="badge bg-info me-2">Total IPs: {{ total_ips }}</span> 
+            <span class="badge bg-danger">Malicious: {{ malicious_count }}</span>
+        </div>
+        <span class="badge bg-secondary" style="font-size:0.65rem;">
+            <i class="fas fa-shield-alt me-1"></i> Powered by VirusTotal
+        </span>
+       <!-- shiw when attack was last fetched in where i have used django timezone date and time for accuracy -->
+        <small class="text-muted">Last updated: {{ now|date:"Y-m-d H:i:s" }}</small>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" style="font-size:0.8rem;">
+            <thead>
+                <tr>
+                    <th>IP Address</th>
+                    <th>Reputation</th>
+                    <th>Reason</th>
+                    <th>Risk</th>
+                    <th>Country</th>
+                    <th>Detection</th>
+                    <th>Last Analysis</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                {% for item in results %}
+                <tr>
+                    <td><span style="font-family:var(--font-mono);color:var(--cyan);">{{ item.ip }}</span></td>
+                    <td>
+                        {% if item.reputation == 'Malicious' %}
+                            <span class="badge bg-danger">Malicious</span>
+                        {% else %}
+                            <span class="badge bg-success">Clean</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.error %}
+                            <span class="text-muted">{{ item.error }}</span>
+                        {% else %}
+                            {{ item.reason }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.risk == 'High' %}
+                            <span class="badge bg-danger">High</span>
+                        {% elif item.risk == 'Medium' %}
+                            <span class="badge bg-warning">Medium</span>
+                        {% elif item.risk == 'Low' %}
+                            <span class="badge bg-success">Low</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Unknown</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.country|default:"Unknown" }}</td>
+                    <td>{{ item.detection_ratio|default:"N/A" }}</td>
+                    <td>{{ item.last_analysis|default:"Never" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No IPs found in alerts or anomalies.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

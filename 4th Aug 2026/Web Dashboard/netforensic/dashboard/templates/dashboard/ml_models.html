@@ -1,0 +1,653 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Network Forensics - ML Models</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-body: #070b14;
+            --bg-sidebar: #0a0f1e;
+            --bg-card: rgba(13, 20, 38, 0.7);
+            --bg-card-hover: rgba(20, 30, 55, 0.85);
+            --text-primary: #f0f4ff;
+            --text-secondary: #b0b8c8;
+            --text-muted: #4a5568;
+            --border-soft: rgba(6, 182, 212, 0.06);
+            --border-glow: rgba(6, 182, 212, 0.2);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --glass-blur: 18px;
+            --cyan: #06b6d4;
+            --red: #ef4444;
+            --purple: #8b5cf6;
+            --amber: #f59e0b;
+            --green: #22c55e;
+            --gradient-primary: linear-gradient(135deg, #06b6d4, #8b5cf6);
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+        }
+
+        [data-bs-theme="light"] {
+            --bg-body: #f0f4f8;
+            --bg-sidebar: rgba(255,255,255,0.92);
+            --bg-card: rgba(255,255,255,0.7);
+            --bg-card-hover: rgba(255,255,255,0.95);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border-soft: rgba(6, 182, 212, 0.12);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.04);
+            --cyan: #0891b2;
+            --glass-blur: 8px;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            background-image:
+                radial-gradient(circle at 15% 25%, rgba(6, 182, 212, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 85% 75%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            transition: background-color 0.4s, color 0.4s;
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--cyan); border-radius: 10px; }
+
+        .sidebar {
+            background: var(--bg-sidebar);
+            border-right: 1px solid rgba(255,255,255,0.03);
+            min-height: 100vh;
+            padding: 24px 12px;
+            transition: background 0.4s, left 0.3s;
+        }
+        @media (min-width: 768px) {
+            .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+            .hamburger-btn { display: none !important; }
+            .sidebar-overlay { display: none !important; }
+        }
+        @media (max-width: 767.98px) {
+            .sidebar {
+                position: fixed; left: -300px; top: 0; width: 280px; height: 100vh; z-index: 1050;
+                box-shadow: 4px 0 40px rgba(0,0,0,0.8); overflow-y: auto;
+            }
+            .sidebar.open { left: 0; }
+            .sidebar-overlay {
+                display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1040;
+            }
+            .sidebar-overlay.active { display: block; }
+        }
+
+        .sidebar .brand { color: var(--text-primary); font-weight: 800; font-size: 1.2rem; letter-spacing: -0.5px; }
+        .sidebar .brand i { color: var(--cyan); }
+        .sidebar .nav-section {
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            padding: 22px 14px 6px 14px;
+            font-weight: 700;
+        }
+        .sidebar .nav-link {
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+        .sidebar .nav-link i { width: 22px; color: var(--text-muted); font-size: 0.85rem; }
+        .sidebar .nav-link:hover {
+            background: rgba(255,255,255,0.04);
+            color: var(--text-primary);
+            transform: translateX(2px);
+        }
+        .sidebar .nav-link:hover i { color: var(--cyan); }
+        .sidebar .nav-link.active {
+            background: rgba(6, 182, 212, 0.08);
+            color: var(--cyan);
+        }
+        .sidebar .nav-link.active::before {
+            content: '';
+            position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px;
+            background: var(--gradient-primary);
+            border-radius: 0 3px 3px 0;
+        }
+        .sidebar .nav-link.active i { color: var(--cyan); }
+
+        .main-content { padding-bottom: 28px; }
+
+        /* MODEL CARDS*/
+        .model-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--border-soft);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow-card);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        .model-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-glow);
+            box-shadow: 0 12px 40px rgba(6, 182, 212, 0.05);
+            background: var(--bg-card-hover);
+        }
+
+        .model-card .model-icon {
+            font-size: 2.2rem;
+            margin-bottom: 4px;
+        }
+        .model-card .model-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .model-card .model-sub {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .model-card .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 14px 0;
+        }
+        .model-card .metric-item {
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            padding: 10px 12px;
+            border: 1px solid var(--border-soft);
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .model-card .metric-item:hover {
+            background: rgba(6, 182, 212, 0.05);
+            border-color: var(--border-glow);
+        }
+        .model-card .metric-item .label {
+            font-size: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .model-card .metric-item .value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+            margin-top: 2px;
+        }
+
+        .model-card .model-status {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 8px;
+            border: 1px solid var(--border-soft);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .model-card .model-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .btn-ghost {
+            background: rgba(255,255,255,0.03);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-soft);
+            transition: all 0.2s;
+            font-size: 0.7rem;
+            padding: 4px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+        }
+        .btn-ghost:hover {
+            background: rgba(6, 182, 212, 0.08);
+            color: var(--cyan);
+            border-color: var(--border-glow);
+        }
+
+        .btn-primary-cyan {
+            background: var(--cyan);
+            border: none;
+            color: #000;
+            font-weight: 600;
+            padding: 6px 18px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 16px rgba(6, 182, 212, 0.25);
+        }
+        .btn-primary-cyan:hover {
+            opacity: 0.85;
+            transform: scale(1.02);
+            color: #000;
+        }
+
+        .badge-active {
+            background: rgba(34,197,94,0.15);
+            color: var(--green);
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 0.6rem;
+            font-weight: 600;
+        }
+
+        /* ===== COMPARISON BARS ===== */
+        .comparison-bar {
+            background: rgba(255,255,255,0.02);
+            border-radius: 8px;
+            padding: 10px 14px;
+            border: 1px solid var(--border-soft);
+            margin-bottom: 8px;
+        }
+        .comparison-bar .bar-track {
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 4px 0;
+        }
+        .comparison-bar .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.8s ease;
+        }
+
+        .theme-toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.03);
+            padding: 4px 14px 4px 10px;
+            border-radius: 30px;
+            border: 1px solid var(--border-soft);
+            transition: all 0.3s ease;
+        }
+        .theme-toggle-wrapper:hover { border-color: var(--border-glow); }
+        .theme-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+        .theme-switch input { opacity: 0; width: 0; height: 0; }
+        .theme-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--text-muted);
+            transition: .3s;
+            border-radius: 34px;
+        }
+        .theme-slider:before {
+            content: "";
+            position: absolute;
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background: #ffffff;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .theme-slider {
+            background: var(--gradient-primary);
+        }
+        input:checked + .theme-slider:before {
+            transform: translateX(18px);
+        }
+
+        .pulse-dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse-dot 1.8s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.15);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--green);
+        }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { opacity: 0; animation: fadeSlideUp 0.5s ease forwards; }
+        .animate-in:nth-child(1) { animation-delay: 0.05s; }
+        .animate-in:nth-child(2) { animation-delay: 0.15s; }
+
+        .text-muted-small { font-size: 0.7rem; color: var(--text-muted); }
+        .fw-700 { font-weight: 700; }
+        .gap-1 { gap: 4px; }
+    </style>
+</head>
+
+
+<body>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+
+            <!-- SIDEBAR -->
+            <div class="col-md-2 sidebar" id="mainSidebar">
+                <div class="d-flex align-items-center mb-4 px-2">
+                    <i class="fas fa-shield-halved fa-2x me-2" style="color: var(--cyan);"></i>
+                    <span class="brand">AI Network Forensics</span>
+                </div>
+
+                <div class="nav-section">Monitor</div>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{% url 'index' %}"><i class="fas fa-tachometer-alt"></i> Overview</a>
+                    <a class="nav-link" href="{% url 'live_traffic' %}"><i class="fas fa-exchange-alt"></i> Live Traffic</a>
+                    <a class="nav-link" href="{% url 'alerts_page' %}"><i class="fas fa-bell"></i> Alerts</a>
+                </nav>
+
+                <div class="nav-section">Investigate</div>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{% url 'attack_timeline' %}"><i class="fas fa-clock"></i> Attack Timeline</a>
+                    <a class="nav-link" href="{% url 'ip_explorer' %}"><i class="fas fa-search"></i> IP Explorer</a>
+                    <a class="nav-link" href="{% url 'packet_search' %}"><i class="fas fa-file-alt"></i> Packet Search</a>
+                    <a class="nav-link" href="{% url 'threat_intel' %}"><i class="fas fa-globe"></i> Threat Intel</a>
+                </nav>
+
+                <div class="nav-section">AI Tools</div>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{% url 'ai_assistant' %}"><i class="fas fa-robot"></i> LLM Query</a>
+                    <a class="nav-link active" href="{% url 'ml_models' %}"><i class="fas fa-brain"></i> ML Models</a>
+                    <a class="nav-link" href="{% url 'evaluation' %}"><i class="fas fa-chart-bar"></i> Model Evaluation</a>
+                </nav>
+
+                <div class="mt-auto pt-4">
+                    <hr style="border-color: rgba(255,255,255,0.04);">
+                    <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm w-100"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+                </div>
+            </div>
+
+            <!--the main content of this ml section -->
+            <div class="col-md-10 p-3 p-md-4 main-content">
+
+                <!-- HEADER -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+                    <div>
+                        <h5 class="fw-bold mb-0"><i class="fas fa-brain me-2" style="color: var(--cyan);"></i>ML Models</h5>
+                        <div class="d-flex align-items-center gap-3 mt-1">
+                            <span class="live-badge">
+                                <span class="pulse-dot"></span> <span id="liveLabel">Live</span>
+                            </span>
+                            <span class="text-muted" style="font-size: 0.7rem;" id="liveClock">Loading...</span>
+                            <span class="text-muted" style="font-size: 0.65rem;" id="liveTimestamp">Updated: Just now</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button id="refreshbutton" class="btn-ghost" style="color:var(--cyan);border-color:var(--border-glow);">
+                            <i class="fas fa-sync-alt" id="refreshIcon"></i> <span id="refreshText">Refresh</span>
+                        </button>
+                        <div class="theme-toggle-wrapper">
+                            <i class="fas fa-sun" style="color: #645740; font-size: 1rem;"></i>
+                            <label class="theme-switch">
+                                <input type="checkbox" id="themeCheckbox" checked>
+                                <span class="theme-slider"></span>
+                            </label>
+                            <i class="fas fa-moon" style="color: var(--text-muted); font-size: 1rem;"></i>
+                        </div>
+                        <span class="badge p-2 d-none d-sm-inline-block" style="background: rgba(6, 182, 212, 0.08); color: var(--cyan); border: 1px solid var(--border-soft); font-weight: 500; font-size: 0.65rem;">
+                            <i class="fas fa-user"></i> {{ username }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- in this seciton model cards are done and its metrics performance -->
+                <div class="row g-4 mb-4">
+                    <!-- XGBoost -->
+                    <div class="col-md-6">
+                        <div class="model-card animate-in">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="model-icon" style="color: var(--cyan);"></div>
+                                    <div class="model-name">XGBoost</div>
+                                    <div class="model-sub">Supervised Classification</div>
+                                </div>
+                                <span class="badge-active">● Active</span>
+                            </div>
+                            <div class="metric-grid">
+                                <div class="metric-item">
+                                    <div class="label">Accuracy</div>
+                                    <div class="value" style="color: var(--cyan);">{{ xgboost_performance.accuracy|default:"N/A" }}%</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="label">F1-Score</div>
+                                    <div class="value" style="color: var(--green);">{{ xgboost_performance.f1_score|default:"N/A" }}%</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="label">Precision</div>
+                                    <div class="value" style="color: var(--purple);">{{ xgboost_performance.precision|default:"N/A" }}%</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="label">Recall</div>
+                                    <div class="value" style="color: var(--amber);">{{ xgboost_performance.recall|default:"N/A" }}%</div>
+                                </div>
+                            </div>
+                            <div class="model-status">
+                                <i class="fas fa-database me-1"></i>
+                                Trained on <strong>{{ xgboost_performance.dataset|default:"CICIDS-2017" }}</strong>
+                                <span class="ms-2"><i class="far fa-calendar-alt me-1"></i> Latest version</span>
+                            </div>
+                            <div class="model-actions">
+                                <button class="btn-ghost" onclick="retrainModel('xgboost')"><i class="fas fa-sync-alt"></i> Retrain</button>
+                                <button class="btn-ghost" onclick="viewModelDetails('xgboost')"><i class="fas fa-chart-bar"></i> Details</button>
+                                <button class="btn-ghost" onclick="downloadModel('xgboost')"><i class="fas fa-download"></i> Export</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Isolation Forest -->
+                    <div class="col-md-6">
+                        <div class="model-card animate-in">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="model-icon" style="color: var(--purple);"></div>
+                                    <div class="model-name">Isolation Forest</div>
+                                    <div class="model-sub">Anomaly Detection</div>
+                                </div>
+                                <span class="badge-active">● Active</span>
+                            </div>
+                            <div class="metric-grid">
+                                <div class="metric-item">
+                                    <div class="label">Accuracy</div>
+                                    <div class="value" style="color: var(--cyan);">{{ isolation_forest_performance.accuracy|default:"N/A" }}%</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="label">F1-Score</div>
+                                    <div class="value" style="color: var(--green);">{{ isolation_forest_performance.f1_score|default:"N/A" }}%</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="label">Precision</div>
+                                    <div class="value" style="color: var(--purple);">{{ isolation_forest_performance.precision|default:"N/A" }}%</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="label">Recall</div>
+                                    <div class="value" style="color: var(--amber);">{{ isolation_forest_performance.recall|default:"N/A" }}%</div>
+                                </div>
+                            </div>
+                            <div class="model-status">
+                                <i class="fas fa-database me-1"></i>
+                                Trained on <strong>{{ isolation_forest_performance.dataset|default:"CICIDS-2017" }}</strong>
+                                <span class="ms-2"><i class="far fa-calendar-alt me-1"></i> Latest version</span>
+                            </div>
+                            <div class="model-actions">
+                                <button class="btn-ghost" onclick="retrainModel('isolation_forest')"><i class="fas fa-sync-alt"></i> Retrain</button>
+                                <button class="btn-ghost" onclick="viewModelDetails('isolation_forest')"><i class="fas fa-chart-bar"></i> Details</button>
+                                <button class="btn-ghost" onclick="downloadModel('isolation_forest')"><i class="fas fa-download"></i> Export</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COMPARISON BARS -->
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="model-card">
+                            <h6 class="fw-bold mb-3" style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px;">
+                                <i class="fas fa-chart-simple me-2" style="color: var(--cyan);"></i>Model Performance Comparison
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="comparison-bar">
+                                        <div class="d-flex justify-content-between small">
+                                            <span>XGBoost <span class="text-muted">(Accuracy)</span></span>
+                                            <span class="fw-bold" style="color: var(--cyan);">{{ xgboost_performance.accuracy|default:"N/A" }}%</span>
+                                        </div>
+                                        <div class="bar-track">
+                                            <div class="bar-fill" style="width: {{ xgboost_performance.accuracy|default:"0" }}%; background: var(--green);"></div>
+                                        </div>
+                                    </div>
+                                    <div class="comparison-bar">
+                                        <div class="d-flex justify-content-between small">
+                                            <span>XGBoost <span class="text-muted">(F1-Score)</span></span>
+                                            <span class="fw-bold" style="color: var(--cyan);">{{ xgboost_performance.f1_score|default:"N/A" }}%</span>
+                                        </div>
+                                        <div class="bar-track">
+                                            <div class="bar-fill" style="width: {{xgboost_performance.f1_score|default:"0" }}%; background: var(--green);"></div>
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                
+                                <div class="col-md-6">
+                                    <div class="comparison-bar">
+                                        <div class="d-flex justify-content-between small">
+                                            <span>Isolation Forest <span class="text-muted">(Accuracy)</span></span>
+                                            <span class="fw-bold" style="color: var(--purple);">{{ isolation_forest_performance.accuracy|default:"N/A" }}%</span>
+                                        </div>
+                                        <div class="bar-track">
+                                            <div class="bar-fill" style="width: {{isolation_forest_performance.accuracy|default:"0" }}%; background: var(--green);"></div>
+                                        </div>
+                                    </div>
+                                    <div class="comparison-bar">
+                                        <div class="d-flex justify-content-between small">
+                                            <span>Isolation Forest <span class="text-muted">(F1-Score)</span></span>
+                                            <span class="fw-bold" style="color: var(--purple);">{{ isolation_forest_performance.f1_score|default:"N/A" }}%</span>
+                                        </div>
+                                        <div class="bar-track">
+                                            <div class="bar-fill" style="width: {{isolation_forest_performance.f1_score|default:"0" }}%; background: var(--green);"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center text-muted small mt-3">
+                                <i class="fas fa-info-circle me-1"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FOOTER -->
+                <div class="mt-4 text-center text-muted small">
+                    <hr style="border-color: var(--border-soft);">
+                   <p class="mb-0">Developed by Shree Bahadur Magar · Student ID: 2508454</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- scritping tage used in this project -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // toggle theme used 
+        const checkbox = document.getElementById('themeCheckbox');
+        const htmlEl = document.documentElement;
+        if (localStorage.getItem('theme') === 'light') {
+            htmlEl.setAttribute('data-bs-theme', 'light');
+            checkbox.checked = false;
+        } else {
+            htmlEl.setAttribute('data-bs-theme', 'dark');
+            checkbox.checked = true;
+        }
+        checkbox.addEventListener('change', function() {
+            const mode = this.checked ? 'dark' : 'light';
+            htmlEl.setAttribute('data-bs-theme', mode);
+            localStorage.setItem('theme', mode);
+        });
+
+        // creating a fucntion to upadate the clock 
+        function updateClock() {
+            const now = new Date();
+            // Display the current time in HH:MM:SS (24-hour format)
+            document.getElementById('liveClock').textContent = '🕒 ' + now.toLocaleTimeString('en-GB', { hour12: false });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // event listenser to refresh the button 
+        document.getElementById('refreshbutton').addEventListener('click', function() {
+             // it gets the refresh button and text
+            const icon = document.getElementById('refreshIcon');
+            const text = document.getElementById('refreshText');
+            // animation applied for spinning 
+            icon.classList.add('fa-spin');
+            text.textContent = 'Loading...';
+            this.disabled = true;
+            setTimeout(() => {
+                 // time set to 800 miiseconds for waitting
+                window.location.reload(); 
+            }, 800);
+        });
+
+        // these are UI placeholder that shows alerts but its not fully implemented yet
+        function retrainModel(model) { alert(`Retraining ${model}...`); }
+        function viewModelDetails(model) { alert(`Details for ${model}...`); }
+        function downloadModel(model) { alert(`Downloading ${model}...`); }
+    </script>
+</body>
+</html>

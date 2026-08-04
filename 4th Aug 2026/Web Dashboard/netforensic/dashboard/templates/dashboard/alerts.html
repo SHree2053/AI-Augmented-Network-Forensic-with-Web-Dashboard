@@ -1,0 +1,337 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block page_title %}Alerts Command Center{% endblock %}
+{% block subtitle %}View, filter, and resolve security alerts{% endblock %}
+
+{% block extra_head %}
+<style>
+    .severity-card {
+        background: var(--bg-card);
+        backdrop-filter: blur(var(--glass-blur));
+        -webkit-backdrop-filter: blur(var(--glass-blur));
+        border: 1px solid var(--border-soft);
+        border-radius: 14px;
+        padding: 16px 20px;
+        box-shadow: var(--shadow-card);
+        transition: all 0.25s ease;
+        height: 100%;
+        text-align: center;
+    }
+    .severity-card:hover { transform: translateY(-3px); border-color: var(--border-glow); }
+    .severity-card .number { font-size: 2.4rem; font-weight: 700; font-family: var(--font-mono); line-height: 1.2; }
+    .severity-card .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-secondary); font-weight: 600; margin-top: 4px; }
+    .severity-card.critical .number { color: #ef4444; }
+    .severity-card.high .number { color: #f59e0b; }
+    .severity-card.medium .number { color: var(--cyan); }
+    .severity-card.resolved .number { color: #22c55e; }
+
+    .filter-select {
+        background: var(--input-bg);
+        color: var(--text-primary);
+        border: 1px solid var(--border-soft);
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        outline: none;
+        transition: border-color 0.2s;
+        min-width: 130px;
+    }
+    .filter-select:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(6,182,212,0.1); }
+    .filter-select option { background: var(--bg-card); color: var(--text-primary); }
+
+    .btn-apply {
+        background: var(--cyan);
+        border: none;
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 0.9rem;
+        padding: 8px 24px;
+        border-radius: 8px;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(6,182,212,0.25);
+    }
+    .btn-apply:hover { opacity: 0.85; transform: scale(1.02); box-shadow: 0 6px 20px rgba(6,182,212,0.35); }
+
+    .btn-clear {
+        background: transparent;
+        border: 1px solid var(--border-soft);
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 8px 20px;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+    .btn-clear:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); border-color: var(--border-glow); }
+
+    .alert-row {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border-soft);
+        gap: 12px;
+        transition: background 0.15s;
+        border-radius: 6px;
+    }
+    .alert-row:hover { background: rgba(255,255,255,0.02); }
+    .alert-row .time { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); min-width: 60px; }
+    .alert-row .severity-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 6px;
+        min-width: 60px;
+        text-align: center;
+        color: #000;
+    }
+    .alert-row .severity-badge.critical { background: #ef4444; }
+    .alert-row .severity-badge.high { background: #f59e0b; }
+    .alert-row .severity-badge.medium { background: var(--cyan); }
+    .alert-row .severity-badge.low { background: #22c55e; }
+    .alert-row .severity-badge.resolved { background: #475569; color: #fff; }
+    .alert-row .message { flex: 1; font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alert-row .ip { font-family: var(--font-mono); font-size: 0.8rem; color: var(--cyan); min-width: 100px; }
+    .alert-row .resolve-btn {
+        background: #22c55e;
+        border: none;
+        color: #000;
+        font-weight: 700;
+        font-size: 0.8rem;
+        padding: 6px 18px;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+    .alert-row .resolve-btn:hover { opacity: 0.8; transform: scale(1.02); }
+    .alert-checkbox { accent-color: var(--cyan); width: 17px; height: 17px; cursor: pointer; flex-shrink: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Severity Summary -->
+<div class="row g-2 mb-3">
+    <div class="col-3"><div class="severity-card critical"><div class="number" id="countCritical">0</div><div class="label">Critical</div></div></div>
+    <div class="col-3"><div class="severity-card high"><div class="number" id="countHigh">0</div><div class="label">High</div></div></div>
+    <div class="col-3"><div class="severity-card medium"><div class="number" id="countMedium">0</div><div class="label">Medium</div></div></div>
+    <div class="col-3"><div class="severity-card resolved"><div class="number" id="countResolved">0</div><div class="label">Resolved</div></div></div>
+</div>
+
+<!-- Filter Bar -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        <select id="filterLevel" class="filter-select">
+            <option value="">All Levels</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+            <option value="Info">Info</option>
+        </select>
+        <select id="filterResolved" class="filter-select">
+            <option value="">All</option>
+            <option value="false">Unresolved</option>
+            <option value="true">Resolved</option>
+        </select>
+        <button id="applyFilterBtn" class="btn-apply"><i class="fas fa-filter"></i> Apply</button>
+        <button id="clearFilterBtn" class="btn-clear">Clear</button>
+    </div>
+    <span class="text-muted" style="font-size:0.8rem;">Total: <span id="totalAlerts">{{ alerts|length }}</span></span>
+</div>
+
+<!-- Bulk Actions -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+    <button id="resolveSelectedBtn" class="btn-apply" disabled>
+        <i class="fas fa-check-double"></i> Resolve Selected
+    </button>
+    <button id="selectAllBtn" class="btn-clear" style="font-weight:500;">Select All</button>
+    <button id="deselectAllBtn" class="btn-clear" style="font-weight:500;">Deselect All</button>
+</div>
+<button id="clearResolvedBtn" class="btn-clear" style="font-weight:500; color: var(--red); border-color: rgba(239,68,68,0.3);">
+    <i class="fas fa-trash-alt"></i> Clear Resolved
+</button>
+<!-- Alert List -->
+<div class="dash-card">
+    <div id="alertList" style="max-height:500px;overflow-y:auto;">
+        {% for alert in alerts %}
+        <div class="alert-row" data-level="{{ alert.level }}" data-resolved="{{ alert.is_resolved }}" data-id="{{ alert.id }}">
+            <input type="checkbox" class="alert-checkbox" data-id="{{ alert.id }}">
+            <span class="time">{{ alert.timestamp|date:"H:i:s" }}</span>
+            <span class="severity-badge
+                {% if alert.level == 'Critical' %}critical
+                {% elif alert.level == 'High' %}high
+                {% elif alert.level == 'Medium' %}medium
+                {% elif alert.level == 'Low' %}low
+                {% else %}resolved{% endif %}">
+                {{ alert.level }}
+            </span>
+            <span class="message">{{ alert.message|truncatechars:50 }}</span>
+            <span class="ip">{{ alert.src_ip|default:"—" }}</span>
+            {% if alert.is_resolved %}
+                <span class="severity-badge resolved"><i class="fas fa-check"></i> Resolved</span>
+            {% else %}
+                <button class="resolve-btn resolve-btn-single" data-id="{{ alert.id }}">
+                    <i class="fas fa-check-circle"></i> Resolve
+                </button>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-4" style="font-size:0.9rem;"><i class="fas fa-inbox me-2"></i>No alerts found.</div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+// Update Counts
+function updateCounts() {
+    const items = document.querySelectorAll('.alert-row');
+    let critical = 0, high = 0, medium = 0, resolved = 0;
+    items.forEach(el => {
+        const level = el.dataset.level;
+        const isResolved = el.dataset.resolved === 'True';
+        if (isResolved) resolved++;
+        else if (level === 'Critical') critical++;
+        else if (level === 'High') high++;
+        else if (level === 'Medium') medium++;
+    });
+    document.getElementById('countCritical').textContent = critical;
+    document.getElementById('countHigh').textContent = high;
+    document.getElementById('countMedium').textContent = medium;
+    document.getElementById('countResolved').textContent = resolved;
+    document.getElementById('totalAlerts').textContent = items.length;
+}
+
+// Single Resolve
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.resolve-btn-single');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (!confirm('Resolve this alert?')) return;
+    fetch(`/resolve-alert/${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    })
+    .then(r => r.json())
+    .then(data => { if (data.status === 'success') location.reload(); });
+});
+
+// Filter
+document.getElementById('applyFilterBtn').addEventListener('click', function() {
+    const level = document.getElementById('filterLevel').value;
+    const resolved = document.getElementById('filterResolved').value;
+    let url = '/api/alerts/?';
+    if (level) url += `level=${level}&`;
+    if (resolved) url += `resolved=${resolved}&`;
+
+    fetch(url).then(r => r.json()).then(data => {
+        const container = document.getElementById('alertList');
+        if (data.alerts.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted py-4" style="font-size:0.9rem;"><i class="fas fa-inbox me-2"></i>No alerts match.</div>';
+            return;
+        }
+        container.innerHTML = data.alerts.map(a => `
+            <div class="alert-row" data-level="${a.level}" data-resolved="${a.is_resolved}" data-id="${a.id}">
+                <input type="checkbox" class="alert-checkbox" data-id="${a.id}">
+                <span class="time">${a.timestamp.substring(11, 19)}</span>
+                <span class="severity-badge ${a.level === 'Critical' ? 'critical' : a.level === 'High' ? 'high' : a.level === 'Medium' ? 'medium' : 'low'}">${a.level}</span>
+                <span class="message">${a.message.substring(0, 50)}</span>
+                <span class="ip">${a.ip || '—'}</span>
+                ${a.is_resolved ? '<span class="severity-badge resolved"><i class="fas fa-check"></i> Resolved</span>' : `<button class="resolve-btn resolve-btn-single" data-id="${a.id}"><i class="fas fa-check-circle"></i> Resolve</button>`}
+            </div>
+        `).join('');
+        updateCounts();
+        document.querySelectorAll('.resolve-btn-single').forEach(b => {
+            b.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const id = this.dataset.id;
+                if (!confirm('Resolve this alert?')) return;
+                fetch(`/resolve-alert/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+                    .then(r => r.json())
+                    .then(data => { if (data.status === 'success') location.reload(); });
+            });
+        });
+        document.querySelectorAll('.alert-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateBulkButton);
+        });
+    });
+});
+
+document.getElementById('clearFilterBtn').addEventListener('click', function() {
+    document.getElementById('filterLevel').value = '';
+    document.getElementById('filterResolved').value = '';
+    document.getElementById('applyFilterBtn').click();
+});
+
+// Bulk Resolve
+document.getElementById('selectAllBtn').addEventListener('click', function() {
+    document.querySelectorAll('.alert-checkbox:not(:disabled)').forEach(cb => cb.checked = true);
+    updateBulkButton();
+});
+document.getElementById('deselectAllBtn').addEventListener('click', function() {
+    document.querySelectorAll('.alert-checkbox').forEach(cb => cb.checked = false);
+    updateBulkButton();
+});
+
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('alert-checkbox')) updateBulkButton();
+});
+
+function updateBulkButton() {
+    const selected = document.querySelectorAll('.alert-checkbox:checked');
+    const btn = document.getElementById('resolveSelectedBtn');
+    if (selected.length > 0) {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-check-double"></i> Resolve ${selected.length} Selected`;
+    } else {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-check-double"></i> Resolve Selected`;
+    }
+}
+
+document.getElementById('resolveSelectedBtn').addEventListener('click', function() {
+    const selected = document.querySelectorAll('.alert-checkbox:checked');
+    if (selected.length === 0) return;
+    if (!confirm(`Resolve ${selected.length} selected alert(s)?`)) return;
+    const ids = Array.from(selected).map(cb => cb.dataset.id);
+    const promises = ids.map(id =>
+        fetch(`/resolve-alert/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+    );
+    Promise.all(promises).then(() => location.reload());
+});
+
+document.addEventListener('DOMContentLoaded', updateCounts);
+
+
+
+
+// Clear Resolved Alerts
+document.getElementById('clearResolvedBtn').addEventListener('click', function() {
+    if (!confirm('Are you sure you want to delete ALL resolved alerts? This cannot be undone.')) return;
+
+    fetch('/clear-alerts/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(`${data.count} resolved alert(s) cleared.`);
+            location.reload();
+        } else {
+            alert('Error clearing alerts.');
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+});
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

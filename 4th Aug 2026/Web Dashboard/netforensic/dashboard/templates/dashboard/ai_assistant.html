@@ -1,0 +1,163 @@
+{% extends "dashboard/base.html" %}
+{% block title %}LLM Query{% endblock %}
+{% block page_title %}LLM Query{% endblock %}
+{% block subtitle %}Ask forensic questions using Llama 3.1 (locally deployed){% endblock %}
+
+{% block content %}
+<div class="row g-2 mb-3">
+    <div class="col-3">
+        <div class="metric-card"><div class="metric-label">Packets</div><div class="metric-value" id="statPackets">—</div></div>
+    </div>
+    <div class="col-3">
+        <div class="metric-card"><div class="metric-label" style="color:var(--red);">Anomalies</div><div class="metric-value" id="statAnomalies" style="color:var(--red);">—</div></div>
+    </div>
+    <div class="col-3">
+        <div class="metric-card"><div class="metric-label" style="color:var(--amber);">Alerts</div><div class="metric-value" id="statAlerts" style="color:var(--amber);">—</div></div>
+    </div>
+    <div class="col-3">
+        <div class="metric-card"><div class="metric-label">Status</div><div class="metric-value" style="font-size:1.2rem;color:var(--green);"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Live</div></div>
+    </div>
+</div>
+
+<div class="dash-card">
+    <div class="d-flex gap-1 mb-2 flex-wrap">
+        <button class="btn btn-ghost quick-btn" data-query="Summarize recent network traffic and highlight any threats." style="font-size:0.7rem;"><i class="fas fa-bolt"></i> Summarize</button>
+        <button class="btn btn-ghost quick-btn" data-query="List all attacks detected in the last 24 hours." style="font-size:0.7rem;"><i class="fas fa-list"></i> Attacks</button>
+        <button class="btn btn-ghost quick-btn" data-query="What are the top suspicious IP addresses and why?" style="font-size:0.7rem;"><i class="fas fa-user-secret"></i> Top IPs</button>
+        <button class="btn btn-ghost quick-btn" data-query="Give me a quick security overview of the network." style="font-size:0.7rem;"><i class="fas fa-shield-alt"></i> Overview</button>
+    </div>
+    <div class="chat-container" id="chatContainer" style="max-height:350px;overflow-y:auto;margin-bottom:12px;">
+        <div class="chat-message assistant" style="padding:10px 16px;border-radius:12px;background:rgba(255,255,255,0.04);color:var(--text-secondary);max-width:85%;margin-bottom:8px;">
+            <strong style="color:var(--text-primary);">Welcome, Analyst.</strong><br>
+            I'm your AI forensic assistant. Ask me anything about your network data.
+        </div>
+    </div>
+    <div class="chat-input-area" style="display:flex;gap:10px;">
+        <input type="text" id="chatInput" class="form-control" placeholder="Type your forensic question..." style="flex:1;background:var(--input-bg);color:var(--text-primary);border:1px solid var(--border-soft);border-radius:30px;padding:10px 18px;outline:none;font-size:0.9rem;">
+        <button id="sendBtn" class="btn btn-refresh"><i class="fas fa-paper-plane"></i></button>
+        <button id="clearChatBtn" class="btn btn-ghost"><i class="fas fa-trash-alt"></i></button>
+    </div>
+    <div class="mt-2 d-flex justify-content-between">
+        <span class="text-muted small"><i class="fas fa-info-circle me-1"></i> Powered by Ollama + Llama 3.1</span>
+        <span class="text-muted small" id="modelStatus">Model: <span style="color:var(--cyan);">llama3.2:3b</span></span>
+    </div>
+</div>
+
+<script>
+// Fetch stats
+fetch('/dashboard-stats/')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('statPackets').textContent = data.total_packets.toLocaleString();
+        document.getElementById('statAnomalies').textContent = data.anomalies.toLocaleString();
+        document.getElementById('statAlerts').textContent = data.recent_alerts ? data.recent_alerts.length : 0;
+    })
+    .catch(() => {});
+
+const chatContainer = document.getElementById('chatContainer');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+let isWaiting = false;
+
+function addMessage(role, content) {
+    const div = document.createElement('div');
+    div.className = `chat-message ${role}`;
+    div.style.cssText = `
+        padding: 10px 16px;
+        border-radius: 12px;
+        max-width: 85%;
+        margin-bottom: 8px;
+        line-height: 1.5;
+        font-size: 0.9rem;
+        ${role === 'user' ? `
+            background: rgba(6,182,212,0.15);
+            margin-left: auto;
+            color: var(--text-primary);
+            border-top-right-radius: 4px;
+        ` : `
+            background: rgba(255,255,255,0.04);
+            color: var(--text-secondary);
+            border-top-left-radius: 4px;
+        `}
+    `;
+    div.textContent = content;
+    chatContainer.appendChild(div);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function showTyping() {
+    const div = document.createElement('div');
+    div.className = 'chat-message assistant';
+    div.id = 'typingIndicator';
+    div.style.cssText = 'padding:10px 16px;border-radius:12px;max-width:85%;margin-bottom:8px;background:rgba(255,255,255,0.04);color:var(--text-secondary);';
+    div.innerHTML = '<div style="display:flex;gap:6px;align-items:center;"><span style="display:inline-block;width:8px;height:8px;background:var(--text-muted);border-radius:50%;animation:pulse-dot 1.4s infinite both;"></span><span style="display:inline-block;width:8px;height:8px;background:var(--text-muted);border-radius:50%;animation:pulse-dot 1.4s infinite both;animation-delay:0.2s;"></span><span style="display:inline-block;width:8px;height:8px;background:var(--text-muted);border-radius:50%;animation:pulse-dot 1.4s infinite both;animation-delay:0.4s;"></span></div>';
+    chatContainer.appendChild(div);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function removeTyping() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+}
+
+function sendMessage(query) {
+    if (isWaiting) return;
+    if (!query) query = chatInput.value.trim();
+    if (!query) return;
+    addMessage('user', query);
+    chatInput.value = '';
+    sendBtn.disabled = true;
+    isWaiting = true;
+    showTyping();
+
+    fetch('/llm-query/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'query=' + encodeURIComponent(query)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Server error');
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        removeTyping();
+        const assistantDiv = document.createElement('div');
+        assistantDiv.className = 'chat-message assistant';
+        assistantDiv.style.cssText = 'padding:10px 16px;border-radius:12px;max-width:85%;margin-bottom:8px;background:rgba(255,255,255,0.04);color:var(--text-secondary);border-top-left-radius:4px;';
+        chatContainer.appendChild(assistantDiv);
+        let fullText = '';
+        function readStream() {
+            return reader.read().then(({ done, value }) => {
+                if (done) { sendBtn.disabled = false; isWaiting = false; return; }
+                fullText += decoder.decode(value, { stream: true });
+                assistantDiv.textContent = fullText;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                return readStream();
+            });
+        }
+        return readStream();
+    })
+    .catch(err => {
+        removeTyping();
+        addMessage('assistant', 'Error: ' + err.message + '. Make sure Ollama is running.');
+        sendBtn.disabled = false;
+        isWaiting = false;
+    });
+}
+
+document.querySelectorAll('.quick-btn').forEach(btn => {
+    btn.addEventListener('click', function() { sendMessage(this.dataset.query); });
+});
+
+document.getElementById('clearChatBtn').addEventListener('click', function() {
+    chatContainer.innerHTML = `
+        <div class="chat-message assistant" style="padding:10px 16px;border-radius:12px;background:rgba(255,255,255,0.04);color:var(--text-secondary);max-width:85%;margin-bottom:8px;">
+            <strong style="color:var(--text-primary);">Chat cleared.</strong><br>
+            Ask me anything about your network data.
+        </div>
+    `;
+});
+
+sendBtn.addEventListener('click', () => sendMessage());
+chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+</script>
+{% endblock %}

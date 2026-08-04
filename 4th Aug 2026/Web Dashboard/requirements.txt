@@ -1,0 +1,22 @@
+#these are the libaries imported for the project and theriv verison 
+Django==4.2.11
+django-csp==3.7
+django-axes==6.4.0
+requests==2.32.5
+
+# Database (only if using PostgreSQL)
+psycopg2-binary==2.9.9
+
+# ML/Data Science
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.1
+joblib==1.4.2
+xgboost==2.1.1
+
+# Packet analysis
+scapy==2.6.0
+dpkt==1.9.8
+
+# Excel support
+openpyxl==3.1.5

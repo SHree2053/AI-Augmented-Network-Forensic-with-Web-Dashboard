@@ -1,0 +1,68 @@
+<!-- uses base.html file for main layout -->
+{% extends "dashboard/base.html" %}
+{% block title %}IP Explorer{% endblock %}
+{% block page_title %}IP Explorer{% endblock %}
+{% block subtitle %}Investigate specific IP addresses{% endblock %}
+
+{% block content %}
+<div class="dash-card">
+    <div class="input-group mb-3">
+        <input type="text" id="ipInput" class="form-control" placeholder="Enter IP address (e.g., 192.168.1.10)" style="background:var(--input-bg);color:var(--text-primary);border:1px solid var(--border-soft);border-radius:8px 0 0 8px;font-family:var(--font-mono);">
+        <button id="searchbutton" class="btn btn-refresh" style="border-radius:0 8px 8px 0;"><i class="fas fa-search"></i> Investigate</button>
+    </div>
+    <div id="ipResults" style="display:none;">
+        <div class="row g-2 mb-3">
+            <div class="col-3"><div class="metric-card"><div class="metric-label">Total Events</div><div class="metric-value" id="ipTotal">0</div></div></div>
+            <div class="col-3"><div class="metric-card"><div class="metric-label" style="color:var(--red);">Anomalies</div><div class="metric-value" id="ipAnomalies" style="color:var(--red);">0</div></div></div>
+            <div class="col-3"><div class="metric-card"><div class="metric-label">Unique Dests</div><div class="metric-value" id="ipDests">0</div></div></div>
+            <div class="col-3"><div class="metric-card"><div class="metric-label">Unique Sources</div><div class="metric-value" id="ipSources">0</div></div></div>
+        </div>
+        <div id="ipEvents" style="max-height:300px;overflow-y:auto;"></div>
+    </div>
+    <div id="ipLoading" class="text-center text-muted py-4" style="display:none;font-size:0.85rem;"><i class="fas fa-spinner fa-spin me-2"></i>Investigating...</div>
+</div>
+
+<script>
+document.getElementById('searchbutton').addEventListener('click', function() {
+     // this code gets the ipaddress input by user without spaces
+    const ip = document.getElementById('ipInput').value.trim();
+    // stopping if no ip was entered
+    if (!ip) return;
+     //getting refeences and loading the results
+    const results = document.getElementById('ipResults');
+    const loading = document.getElementById('ipLoading');
+    loading.style.display = 'block';
+    results.style.display = 'none';
+     // it sends a get request to the Django API for instance  /api/ip-details/192.168.1.10/
+    fetch(`/api/ip-details/${ip}/`)
+    // transfer http response to js object
+        .then(r => r.json())
+        // Handling the returned JSON data
+        .then(data => {
+            // does not show loading section but only shows results
+            loading.style.display = 'none';
+            results.style.display = 'block';
+              // it upadate the statistics cards on page
+            document.getElementById('ipTotal').textContent = data.stats.total_events;
+            document.getElementById('ipAnomalies').textContent = data.stats.anomalies;
+            document.getElementById('ipDests').textContent = data.stats.unique_destinations;
+            document.getElementById('ipSources').textContent = data.stats.unique_sources;
+            
+              //it generates the list of events for searched ip and it rakes raw data from the backend and convert that data into color-coded indicatords such as normal and attack
+            document.getElementById('ipEvents').innerHTML = data.events.map(e => `
+                <div class="traffic-item" style="display:flex;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);gap:10px;font-size:0.8rem;">
+                    <span style="font-family:var(--font-mono);color:var(--text-muted);font-size:0.7rem;">${e.timestamp.substring(11, 19)}</span>
+                    <span style="font-family:var(--font-mono);color:var(--cyan);">${e.src_ip}</span>
+                    <span style="color:var(--text-muted);">→</span>
+                    <span style="font-family:var(--font-mono);color:var(--text-secondary);">${e.dst_ip}</span>
+                    <span class="proto-badge" style="background:rgba(6,182,212,0.12);color:var(--cyan);font-size:0.65rem;">${e.protocol}</span>
+                     <!-- Show ATTACK if anomaly, otherwise NORMAL -->
+                    ${e.is_anomaly ? '<span class="badge bg-danger">ATTACK</span>' : '<span class="badge bg-success">NORMAL</span>'}
+                </div>
+            `).join(''); //combining all html into string
+        })
+          //handling errors if arises
+        .catch(err => { loading.style.display = 'none'; showToast('Error', err.message, 'danger'); });
+});
+</script>
+{% endblock %}

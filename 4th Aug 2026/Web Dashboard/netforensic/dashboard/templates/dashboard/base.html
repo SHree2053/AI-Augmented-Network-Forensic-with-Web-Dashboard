@@ -1,0 +1,711 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetForensic - {% block title %}Dashboard{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-body: #070b14;
+            --bg-sidebar: #0a0f1e;
+            --bg-card: rgba(13, 20, 38, 0.7);
+            --bg-card-hover: rgba(20, 30, 55, 0.85);
+            --text-primary: #f0f4ff;
+            --text-secondary: #b0b8c8;
+            --text-muted: #4a5568;
+            --border-soft: rgba(6, 182, 212, 0.06);
+            --border-glow: rgba(6, 182, 212, 0.2);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --glass-blur: 18px;
+            --cyan: #06b6d4;
+            --red: #ef4444;
+            --purple: #8b5cf6;
+            --amber: #f59e0b;
+            --green: #22c55e;
+            --gradient-primary: linear-gradient(135deg, #06b6d4, #8b5cf6);
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --input-bg: rgba(255,255,255,0.04);
+        }
+
+        [data-bs-theme="light"] {
+            --bg-body: #f0f4f8;
+            --bg-sidebar: rgba(255,255,255,0.92);
+            --bg-card: rgba(255,255,255,0.7);
+            --bg-card-hover: rgba(255,255,255,0.95);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border-soft: rgba(6, 182, 212, 0.12);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.04);
+            --cyan: #0891b2;
+            --input-bg: #ffffff;
+            --glass-blur: 8px;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            background-image: radial-gradient(circle at 15% 25%, rgba(6,182,212,0.05) 0%, transparent 50%), radial-gradient(circle at 85% 75%, rgba(139,92,246,0.05) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            transition: background-color 0.4s, color 0.4s;
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--cyan); border-radius: 10px; }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            background: var(--bg-sidebar);
+            border-right: 1px solid rgba(255,255,255,0.03);
+            min-height: 100vh;
+            padding: 24px 12px;
+            transition: background 0.4s, left 0.3s;
+        }
+        @media (min-width: 768px) {
+            .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+            .hamburger-btn { display: none !important; }
+            .sidebar-overlay { display: none !important; }
+        }
+        @media (max-width: 767.98px) {
+            .sidebar {
+                position: fixed; left: -300px; top: 0; width: 280px; height: 100vh; z-index: 1050;
+                box-shadow: 4px 0 40px rgba(0,0,0,0.8);
+                overflow-y: auto;
+            }
+            .sidebar.open { left: 0; }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                background: rgba(0,0,0,0.6);
+                backdrop-filter: blur(4px);
+                z-index: 1040;
+            }
+            .sidebar-overlay.active { display: block; }
+        }
+
+        .sidebar .brand {
+            color: var(--text-primary);
+            font-weight: 800;
+            font-size: 1.2rem;
+            letter-spacing: -0.5px;
+        }
+        .sidebar .brand i { color: var(--cyan); }
+
+        .sidebar .nav-section {
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            padding: 22px 14px 6px 14px;
+            font-weight: 700;
+        }
+        .sidebar .nav-section:first-of-type { padding-top: 16px; }
+
+        .sidebar .nav-link {
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .sidebar .nav-link i { width: 22px; color: var(--text-muted); font-size: 0.85rem; }
+        .sidebar .nav-link:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); transform: translateX(2px); }
+        .sidebar .nav-link:hover i { color: var(--cyan); }
+        .sidebar .nav-link.active {
+            background: rgba(6,182,212,0.08);
+            color: var(--cyan);
+        }
+        .sidebar .nav-link.active::before {
+            content: '';
+            position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px;
+            background: var(--gradient-primary);
+            border-radius: 0 3px 3px 0;
+        }
+        .sidebar .nav-link.active i { color: var(--cyan); }
+        .sidebar .nav-badge {
+            margin-left: auto;
+            background: rgba(239,68,68,0.15);
+            color: var(--red);
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-family: var(--font-mono);
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--border-soft);
+            border-radius: 16px;
+            padding: 22px 24px;
+            box-shadow: var(--shadow-card);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            cursor: default;
+        }
+        .metric-card:hover { transform: translateY(-4px); border-color: var(--border-glow); box-shadow: 0 12px 40px rgba(6,182,212,0.05); background: var(--bg-card-hover); }
+        .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient-primary); opacity: 0.5; transition: opacity 0.3s; }
+        .metric-card:hover::before { opacity: 1; }
+
+        .metric-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gradient-primary);
+            opacity: 0.1;
+            font-size: 1.6rem;
+            color: var(--cyan);
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        .metric-card:hover .metric-icon-wrap { opacity: 0.2; transform: scale(1.05) rotate(-4deg); }
+
+        .metric-card .metric-label { color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+        .metric-card .metric-value { color: var(--text-primary); font-weight: 700; font-size: 2.2rem; margin: 6px 0 2px 0; line-height: 1.1; font-family: var(--font-mono); letter-spacing: -0.5px; }
+        .metric-card .metric-change { font-size: 0.7rem; font-weight: 500; }
+
+        .dash-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--border-soft);
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: var(--shadow-card);
+            transition: border-color 0.3s;
+            height: 100%;
+        }
+        .dash-card:hover { border-color: var(--border-glow); }
+        .dash-card .card-title { color: var(--text-secondary); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; }
+        .dash-card .card-title i { margin-right: 8px; color: var(--cyan); }
+
+        .chart-container { position: relative; width: 100%; height: 200px; }
+        @media (max-width: 576px) { .chart-container { height: 150px; } .metric-value { font-size: 1.5rem !important; } }
+
+        .btn-ghost {
+            background: rgba(255,255,255,0.03);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-soft);
+            transition: all 0.2s;
+            font-size: 0.75rem;
+            padding: 5px 14px;
+            border-radius: 8px;
+        }
+        .btn-ghost:hover { background: rgba(6,182,212,0.08); color: var(--cyan); border-color: var(--border-glow); }
+
+        .btn-primary-cyan {
+            background: var(--cyan);
+            border: none;
+            color: #000;
+            font-weight: 600;
+            padding: 6px 18px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 16px rgba(6,182,212,0.25);
+        }
+        .btn-primary-cyan:hover { opacity: 0.85; transform: scale(1.02); box-shadow: 0 6px 24px rgba(6,182,212,0.35); }
+
+        .text-gradient { background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+        .theme-toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.03);
+            padding: 4px 14px 4px 10px;
+            border-radius: 30px;
+            border: 1px solid var(--border-soft);
+            transition: all 0.3s ease;
+        }
+        .theme-toggle-wrapper:hover { border-color: var(--border-glow); }
+        .theme-toggle-wrapper .icon-sun { color: #f59e0b; font-size: 1rem; }
+        .theme-toggle-wrapper .icon-moon { color: var(--text-muted); font-size: 1rem; }
+        .theme-switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+        .theme-switch input { opacity: 0; width: 0; height: 0; }
+        .theme-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--text-muted);
+            transition: .3s;
+            border-radius: 34px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .theme-slider:before {
+            content: "";
+            position: absolute;
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background: #ffffff;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .theme-slider { background: var(--gradient-primary); box-shadow: 0 0 20px rgba(6,182,212,0.3); }
+        input:checked + .theme-slider:before { transform: translateX(18px); }
+
+        .pulse-dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse-dot 1.8s ease-in-out infinite;
+        }
+        @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(34,197,94,0.4); } 50% { opacity: 0.6; transform: scale(0.8); box-shadow: 0 0 0 6px rgba(34,197,94,0); } }
+
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(34,197,94,0.08);
+            border: 1px solid rgba(34,197,94,0.15);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--green);
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border-soft);
+            gap: 12px;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+        }
+        .alert-item:hover { background: rgba(255,255,255,0.03); padding-left: 14px; }
+        .alert-item:last-child { border-bottom: none; }
+        .alert-item .alert-time { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); min-width: 40px; font-weight: 600; }
+        .alert-item .alert-ip { font-family: var(--font-mono); font-size: 0.7rem; color: var(--cyan); min-width: 90px; font-weight: 500; }
+        .alert-item .alert-msg { flex: 1; font-size: 0.82rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .alert-item .badge { font-size: 0.55rem; padding: 3px 10px; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 6px; font-weight: 700; }
+
+        .attack-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+            transition: all 0.15s;
+            cursor: pointer;
+            border-radius: 4px;
+            padding-left: 4px;
+        }
+        .attack-list-item:hover { background: rgba(255,255,255,0.03); padding-left: 10px; color: var(--text-primary); }
+        .attack-list-item:last-child { border-bottom: none; }
+        .attack-list-item .al-dot { display: inline-block; width: 10px; height: 10px; border-radius: 4px; margin-right: 10px; }
+        .attack-list-item .al-count { font-weight: 700; font-family: var(--font-mono); color: var(--text-primary); }
+
+        .insight-banner {
+            background: linear-gradient(135deg, rgba(6,182,212,0.04), rgba(139,92,246,0.04));
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            transition: border-color 0.3s;
+        }
+        .insight-banner:hover { border-color: var(--border-glow); }
+        .insight-banner .insight-icon { color: var(--cyan); font-size: 1.3rem; margin-top: 2px; flex-shrink: 0; }
+        .insight-banner .insight-text { flex: 1; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+        .insight-banner .insight-text strong { color: var(--text-primary); font-weight: 600; }
+
+        .pkt-table {
+            width: 100%;
+            font-size: 0.72rem;
+            font-family: var(--font-mono);
+            border-collapse: collapse;
+        }
+        .pkt-table thead th {
+            color: var(--text-muted);
+            font-size: 0.58rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 700;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border-soft);
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 2;
+        }
+        .pkt-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.02); transition: background 0.15s; cursor: pointer; }
+        .pkt-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+        .pkt-table tbody td { padding: 6px 10px; color: var(--text-secondary); white-space: nowrap; }
+        .pkt-table .proto-badge { font-size: 0.55rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
+        .pkt-new { animation: rowGlow 2s ease-out; }
+        @keyframes rowGlow { 0% { background: rgba(6,182,212,0.12); } 100% { background: transparent; } }
+
+        /* ★ TOAST CONTAINER ★ */
+        .toast-container-custom {
+            position: fixed;
+            bottom: 32px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 380px;
+            width: 100%;
+        }
+        .toast-custom {
+            background: var(--bg-card);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            padding: 14px 18px;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
+        }
+        .toast-custom:hover { border-color: var(--border-glow); }
+        .toast-custom.hiding { animation: slideOutRight 0.3s ease forwards; }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideOutRight { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(40px); } }
+        .toast-custom .toast-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+        .toast-custom .toast-body { flex: 1; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; }
+        .toast-custom .toast-body strong { color: var(--text-primary); font-weight: 600; }
+        .toast-custom .toast-close { background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; padding: 0 4px; }
+        .toast-custom .toast-close:hover { color: var(--text-primary); }
+
+        @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { opacity: 0; animation: fadeSlideUp 0.5s ease forwards; }
+        .animate-in:nth-child(1) { animation-delay: 0.05s; }
+        .animate-in:nth-child(2) { animation-delay: 0.10s; }
+        .animate-in:nth-child(3) { animation-delay: 0.15s; }
+        .animate-in:nth-child(4) { animation-delay: 0.20s; }
+
+        .main-content { padding-bottom: 28px; }
+
+        .search-input {
+            background: var(--input-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-soft);
+            border-radius: 8px;
+            padding: 4px 12px 4px 30px;
+            font-size: 0.7rem;
+            width: 160px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus { border-color: var(--cyan); }
+        .search-wrapper { position: relative; display: inline-flex; align-items: center; }
+        .search-wrapper i { position: absolute; left: 10px; color: var(--text-muted); font-size: 0.65rem; pointer-events: none; }
+
+        @media (prefers-reduced-motion: reduce) { .animate-in, .pulse-dot, .pkt-new { animation: none !important; } .animate-in { opacity: 1; } }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+    <!-- SIDEBAR OVERLAY -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+
+            <!-- SIDEBAR -->
+            <div class="col-md-2 sidebar" id="mainSidebar">
+                <div class="d-flex align-items-center mb-4 px-2">
+                    <i class="fas fa-shield-halved fa-2x me-2" style="color: var(--cyan);"></i>
+                    <span class="brand">AI Network Forensics</span>
+                </div>
+
+                <div class="nav-section">Monitor</div>
+                <nav class="nav flex-column">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}"><i class="fas fa-tachometer-alt"></i> Overview</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'live_traffic' %}active{% endif %}" href="{% url 'live_traffic' %}"><i class="fas fa-exchange-alt"></i> Live Traffic</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'alerts_page' %}active{% endif %}" href="{% url 'alerts_page' %}">
+                        <i class="fas fa-bell"></i> Alerts
+                        <span class="nav-badge" id="sidebarAlertCount" style="display:none;">0</span>
+                    </a>
+                </nav>
+
+                <div class="nav-section">Investigate</div>
+                <nav class="nav flex-column">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'attack_timeline' %}active{% endif %}" href="{% url 'attack_timeline' %}"><i class="fas fa-clock"></i> Attack Timeline</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'ip_explorer' %}active{% endif %}" href="{% url 'ip_explorer' %}"><i class="fas fa-search"></i> IP Explorer</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'packet_search' %}active{% endif %}" href="{% url 'packet_search' %}"><i class="fas fa-file-alt"></i> Packet Search</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'threat_intel' %}active{% endif %}" href="{% url 'threat_intel' %}"><i class="fas fa-globe"></i> Threat Intel</a>
+                </nav>
+
+                <div class="nav-section">AI Tools</div>
+                <nav class="nav flex-column">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'ai_assistant' %}active{% endif %}" href="{% url 'ai_assistant' %}"><i class="fas fa-robot"></i> LLM Query</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'ml_models' %}active{% endif %}" href="{% url 'ml_models' %}"><i class="fas fa-brain"></i> ML Models</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'evaluation' %}active{% endif %}" href="{% url 'evaluation' %}"><i class="fas fa-chart-bar"></i> Model Evaluation</a>
+                </nav>
+
+                <div class="mt-auto pt-4">
+                    <hr style="border-color: rgba(255,255,255,0.04);">
+                    <button class="btn-ghost w-100 mb-2 text-start" data-bs-toggle="modal" data-bs-target="#shortcutsModal" style="font-size:0.7rem;">
+                        <i class="fas fa-keyboard me-2"></i>Shortcuts
+                    </button>
+                    <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm w-100"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+                </div>
+            </div>
+
+            <!-- MAIN CONTENT-->
+            <div class="col-md-10 p-3 p-md-4 main-content">
+
+                <!--  HEADER (with theme toggle & username)-->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-primary btn-sm hamburger-btn" onclick="toggleSidebar()" style="background: var(--cyan); border: none; box-shadow: 0 4px 16px rgba(6,182,212,0.3);">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <div>
+                            <h5 class="fw-bold mb-0" style="color: var(--text-primary);">
+                                <i class="fas fa-shield-halved me-1" style="color: var(--cyan);"></i>{% block page_title %}Dashboard{% endblock %}
+                            </h5>
+                            <p class="text-muted" style="font-size: 0.75rem;">{% block subtitle %}{% endblock %}</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <!--GLOBAL THEME TOGGLE  -->
+                        <div class="theme-toggle-wrapper">
+                            <i class="fas fa-sun icon-sun"></i>
+                            <label class="theme-switch">
+                                <input type="checkbox" id="themeCheckbox" checked aria-label="Toggle dark/light theme">
+                                <span class="theme-slider"></span>
+                            </label>
+                            <i class="fas fa-moon icon-moon"></i>
+                        </div>
+                        <span class="badge p-2 d-none d-sm-inline-block" style="background: rgba(6, 182, 212, 0.08); color: var(--cyan); border: 1px solid var(--border-soft); font-weight: 500; font-size: 0.65rem;">
+                            <i class="fas fa-user"></i> {{ username }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- CONTENT BLOCK  -->
+                {% block content %}{% endblock %}
+
+                <!-- FOOTER  -->
+                <div class="mt-4 text-center text-muted small">
+                    <hr style="border-color: var(--border-soft);">
+                    <p class="mb-0">Developed by Shree Bahadur Magar · Student ID: 2508454</p>
+                </div>
+
+            </div><!-- /main-content -->
+        </div>
+    </div>
+
+    <!--  GLOBAL TOAST CONTAINER -->
+    <div class="toast-container-custom" id="toastContainer"></div>
+
+    <!-- KEYBOARD SHORTCUTS MODAL -->
+    <div class="modal fade" id="shortcutsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content" style="background:var(--bg-card);color:var(--text-primary);border-color:var(--border-soft);">
+                <div class="modal-header" style="border-color:var(--border-soft);">
+                    <h5 class="modal-title" style="font-size:0.85rem;"><i class="fas fa-keyboard me-2" style="color:var(--cyan);"></i>Shortcuts</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) grayscale(100%) brightness(200%);"></button>
+                </div>
+                <div class="modal-body" style="font-size:0.78rem;">
+                    <div class="d-flex justify-content-between mb-2"><span>Refresh</span><span class="kbd" style="background:var(--input-bg);border:1px solid var(--border-soft);padding:1px 8px;border-radius:4px;font-family:var(--font-mono);">R</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Search</span><span class="kbd">/</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Toggle theme</span><span class="kbd">T</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Toggle sidebar</span><span class="kbd">S</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Upload PCAP</span><span class="kbd">U</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Export CSV</span><span class="kbd">E</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+       
+        // TOAST NOTIFICATION 
+        function showToast(title, message, type = 'info', duration = 5000) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            while (container.children.length >= 4) container.firstChild.remove();
+            const iconMap = {
+                success: 'fas fa-check-circle',
+                info: 'fas fa-info-circle',
+                warning: 'fas fa-exclamation-triangle',
+                danger: 'fas fa-times-circle'
+            };
+            const toast = document.createElement('div');
+            toast.className = 'toast-custom';
+            toast.innerHTML = `
+                <div class="toast-icon ${type}"><i class="${iconMap[type] || iconMap.info}"></i></div>
+                <div class="toast-body"><strong>${title}</strong><br><span>${message}</span></div>
+                <button class="toast-close" onclick="this.closest('.toast-custom').remove()">&times;</button>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        //  SHOW RISK TOAST 
+        function showRiskToast(alert) {
+            const level = alert.level || 'Unknown';
+            const icon = level === 'Critical' ? 'Critical' : level === 'High' ? 'High' : 'Warning';
+            const type = level === 'Critical' || level === 'High' ? 'danger' : 'warning';
+            const title = `${icon} ${level} Risk Alert`;
+            const msg = `${alert.message} from IP: ${alert.ip || 'Unknown'}`;
+            showToast(title, msg, type, 8000);
+        }
+
+        // SHOW EXISTING ALERTS ON LOAD 
+        function showExistingAlertsOnLoad() {
+            fetch('/dashboard-stats/')
+                .then(r => r.json())
+                .then(data => {
+                    const alerts = data.recent_alerts || [];
+                    // Filter to only High/Critical unresolved alerts
+                    const criticalAlerts = alerts.filter(a => a.level === 'Critical' || a.level === 'High');
+                    
+                    if (criticalAlerts.length > 0) {
+                        // Show the first one immediately
+                        showRiskToast(criticalAlerts[0]);
+                        
+                        // If there are more, show a summary after a short delay
+                        if (criticalAlerts.length > 1) {
+                            setTimeout(() => {
+                                showToast(
+                                    `${criticalAlerts.length} Critical/High Alerts`,
+                                    `There are ${criticalAlerts.length} unresolved high-risk alerts requiring your attention.`,
+                                    'danger',
+                                    6000
+                                );
+                            }, 2000);
+                        }
+                    }
+                    
+                    // Store the latest timestamp for future checks
+                    window._lastAlertTimestamp = data.latest_alert_timestamp;
+                })
+                .catch(() => {});
+        }
+
+        // for new alerts ALERT CHECK 
+        function checkNewAlerts() {
+            fetch('/dashboard-stats/')
+                .then(r => r.json())
+                .then(data => {
+                    const newTimestamp = data.latest_alert_timestamp;
+                    const unresolved = data.total_unresolved || 0;
+                    const alerts = data.recent_alerts || [];
+
+                    // Update sidebar badge
+                    const badge = document.getElementById('sidebarAlertCount');
+                    if (badge) {
+                        if (unresolved > 0) {
+                            badge.textContent = unresolved;
+                            badge.style.display = '';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+
+                    // If we have a previous timestamp and it changed → new alert!
+                    if (window._lastAlertTimestamp && newTimestamp && newTimestamp !== window._lastAlertTimestamp) {
+                        // Find the newest alert (it should be the first one)
+                        if (alerts.length > 0) {
+                            // Check if the top alert is High or Critical
+                            const topAlert = alerts[0];
+                            if (topAlert.level === 'Critical' || topAlert.level === 'High') {
+                                showRiskToast(topAlert);
+                            } else {
+                                // Show a generic toast for Medium/Low
+                                showToast(
+                                    'New Alert',
+                                    `[${topAlert.level}] ${topAlert.message.substring(0, 50)}...`,
+                                    'info',
+                                    5000
+                                );
+                            }
+                        }
+                    }
+                    window._lastAlertTimestamp = newTimestamp;
+                })
+                .catch(() => {});
+        }
+
+        // SIDEBAR TOGGLE
+        function toggleSidebar() {
+            document.getElementById('mainSidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('mainSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth < 768 && !sidebar.contains(event.target) && !event.target.closest('.hamburger-btn') && sidebar.classList.contains('open')) {
+                toggleSidebar();
+            }
+        });
+
+        // THEME TOGGLE 
+        const checkbox = document.getElementById('themeCheckbox');
+        if (checkbox) {
+            const htmlEl = document.documentElement;
+            if (localStorage.getItem('theme') === 'light') {
+                htmlEl.setAttribute('data-bs-theme', 'light');
+                checkbox.checked = false;
+            } else {
+                htmlEl.setAttribute('data-bs-theme', 'dark');
+                checkbox.checked = true;
+            }
+            checkbox.addEventListener('change', function() {
+                const mode = this.checked ? 'dark' : 'light';
+                htmlEl.setAttribute('data-bs-theme', mode);
+                localStorage.setItem('theme', mode);
+                showToast(this.checked ? '🌙 Dark Mode' : '☀️ Light Mode', `Switched to ${mode} theme.`, 'info', 2000);
+            });
+        }
+
+        // INITIALIZE 
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show existing alerts on page load
+            setTimeout(showExistingAlertsOnLoad, 500);
+            
+            // Start polling for new alerts every 15 seconds
+            setInterval(checkNewAlerts, 15000);
+            
+            // Also check immediately after the first load
+            setTimeout(checkNewAlerts, 2000);
+        });
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

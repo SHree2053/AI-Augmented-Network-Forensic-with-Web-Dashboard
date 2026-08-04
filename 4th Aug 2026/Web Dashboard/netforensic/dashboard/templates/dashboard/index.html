@@ -1,0 +1,640 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetForensic - SOC Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="{% static 'dashboard/css/style.css' %}">
+        
+</head>
+<body>
+    <!-- displaying sidebar  -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+
+            <!-- SIDEBAR -->
+            <div class="col-md-2 sidebar" id="mainSidebar" role="navigation">
+                <div class="d-flex align-items-center mb-4 px-2">
+                    <i class="fas fa-shield-halved fa-2x me-2" style="color: var(--cyan);"></i>
+                    <span class="brand">AI Network Forensics</span>
+                </div>
+                <div class="nav-section">Monitor</div>
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="{% url 'index' %}"><i class="fas fa-tachometer-alt"></i>
+                        Overview</a>
+                    <a class="nav-link" href="{% url 'live_traffic' %}"><i class="fas fa-exchange-alt"></i> Live
+                        Traffic</a>
+                    <a class="nav-link" href="{% url 'alerts_page' %}">
+                        <i class="fas fa-bell"></i> Alerts
+                        <span class="nav-badge" id="sidebarAlertCount" style="display:none;">0</span>
+                    </a>
+                </nav>
+
+                <div class="nav-section">Investigate</div>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{% url 'attack_timeline' %}"><i class="fas fa-clock"></i> Attack
+                        Timeline</a>
+                    <a class="nav-link" href="{% url 'ip_explorer' %}"><i class="fas fa-search"></i> IP Explorer</a>
+                    <a class="nav-link" href="{% url 'packet_search' %}"><i class="fas fa-file-alt"></i> Packet
+                        Search</a>
+                    <a class="nav-link" href="{% url 'threat_intel' %}"><i class="fas fa-globe"></i> Threat Intel</a>
+                </nav>
+                <div class="nav-section">AI Tools</div>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{% url 'ai_assistant' %}"><i class="fas fa-robot"></i> LLM Query</a>
+                    <a class="nav-link" href="{% url 'ml_models' %}"><i class="fas fa-brain"></i> ML Models</a>
+                    <a class="nav-link" href="{% url 'evaluation' %}"><i class="fas fa-chart-bar"></i> Model
+                        Evaluation</a>
+                </nav>
+                <div class="mt-auto pt-4">
+                    <hr style="border-color: rgba(255,255,255,0.04);">
+                    <button class="btn-ghost w-100 mb-2 text-start" data-bs-toggle="modal"
+                        data-bs-target="#shortcutsModal" style="font-size:0.7rem;">
+                        <i class="fas fa-keyboard me-2"></i>Shortcuts
+                    </button>
+                    <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm w-100"><i
+                            class="fas fa-sign-out-alt me-2"></i>Logout</a>
+                </div>
+            </div>
+
+            
+            <!-- MAIN CONTENT -->
+            <div class="col-md-10 p-3 p-md-4 main-content">
+
+                <!-- HEADER -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-primary btn-sm hamburger-btn" onclick="toggleSidebar()"
+                            style="background: var(--cyan); border: none; box-shadow: 0 4px 16px rgba(6,182,212,0.3);">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <div>
+                            <h5 class="fw-bold mb-0" style="color: var(--text-primary);">
+                                <i class="fas fa-shield-halved me-1" style="color: var(--cyan);"></i>Overview Dashboard
+                            </h5>
+                            <div class="d-flex align-items-center gap-3 mt-1">
+                                <span class="live-badge" id="liveBadge">
+                                    <span class="pulse-dot"></span> <span id="liveLabel">Live</span>
+                                </span>
+                                <span class="text-muted" style="font-size: 0.7rem;" id="liveClock">Loading...</span>
+                                <span class="text-muted" style="font-size: 0.65rem;" id="liveTimestamp">⏱ Updated: Just
+                                    now</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <!-- Upload PCAP -->
+                        <button class="btn-primary-cyan" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <i class="fas fa-upload"></i> <span class="d-none d-sm-inline">Upload PCAP File</span>
+                        </button>
+                        <!-- Refresh -->
+                        <button id="refreshBtn" class="btn-ghost"
+                            style="color:var(--cyan);border-color:var(--border-glow);">
+                            <i class="fas fa-sync-alt" id="refreshIcon"></i>
+                            <span id="refreshText">Refresh</span>
+                        </button>
+                        <!-- Starting Capture button -->
+                        <a href="{% url 'start_capture' %}" class="btn btn-sm"
+                            style="background:var(--green);border:none;font-weight:600;color:#000;padding:6px 16px;border-radius:10px;box-shadow:0 4px 12px rgba(34,197,94,0.25);">
+                            <i class="fas fa-play"></i> <span class="d-none d-sm-inline">Start</span>
+                        </a>
+                        <a href="{% url 'stop_capture' %}" class="btn btn-sm"
+                            style="background:var(--red);border:none;font-weight:600;color:#fff;padding:6px 16px;border-radius:10px;">
+                            <i class="fas fa-stop"></i> <span class="d-none d-sm-inline">Stop</span>
+                        </a>
+
+                        <!-- Exporting report on excel -->
+                        <a href="{% url 'export_excel' %}" class="btn-ghost"
+                            style="color:var(--cyan);border-color:var(--border-glow);">
+                            <i class="fas fa-file-excel"></i> <span class="d-none d-sm-inline">Excel Report Export</span>
+                        </a>
+                        <!-- Theme Toggle -->
+                        <div class="theme-toggle-wrapper">
+                            <i class="fas fa-sun icon-sun"></i>
+                            <label class="theme-switch">
+                                <input type="checkbox" id="themeCheckbox" checked>
+                                <span class="theme-slider"></span>
+                            </label>
+                            <i class="fas fa-moon icon-moon"></i>
+                        </div>
+                        <!-- Username -->
+                        <span class="badge p-2 d-none d-sm-inline-block"
+                            style="background: rgba(6, 182, 212, 0.08); color: var(--cyan); border: 1px solid var(--border-soft); font-weight: 500; font-size: 0.65rem;">
+                            <i class="fas fa-user"></i> {{ username }}
+                        </span>
+                    </div>
+                </div>
+
+                <!--  METRIC CARDS -->
+                <div class="row g-3 mb-3">
+                    <div class="col-6 col-md-3">
+                        <div class="metric-card animate-in">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="metric-label"><i class="fas fa-database me-1"
+                                            style="color: var(--cyan);"></i>Packets Analysed</div>
+                                    <div class="metric-value" id="metricPackets">{{ total_packets }}</div>
+                                    <div class="metric-change text-success" id="metricGrowth"><i
+                                            class="fas fa-arrow-up"></i> 0% last hour</div>
+                                </div>
+                                <div class="metric-icon-wrap"><i class="fas fa-server"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="metric-card animate-in">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="metric-label"><i class="fas fa-bug me-1"
+                                            style="color: var(--red);"></i>Anomalies Detected</div>
+                                    <div class="metric-value" style="color: var(--red);" id="metricAnomalies">{{
+                                        anomalies }}</div>
+                                    <div class="metric-change text-danger" id="metricToday"><i
+                                            class="fas fa-arrow-up"></i> 0 new today</div>
+                                </div>
+                                <div class="metric-icon-wrap" style="background:rgba(239,68,68,0.1);color:var(--red);">
+                                    <i class="fas fa-skull"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="metric-card animate-in">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="metric-label"><i class="fas fa-brain me-1"
+                                            style="color: var(--purple);"></i>Detection Accuracy</div>
+                                    <div class="metric-value text-gradient" id="metricAccuracy">
+                                        {{xgboost_performance.accuracy}}</div>
+                                    <div class="metric-change text-muted">XGBoost F1</div>
+                                </div>
+                                <div class="metric-icon-wrap"
+                                    style="background:rgba(139,92,246,0.1);color:var(--purple);"><i
+                                        class="fas fa-chart-line"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="metric-card animate-in">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="metric-label"><i class="fas fa-exclamation-triangle me-1"
+                                            style="color: var(--amber);"></i>False Positive Rate</div>
+                                    <div class="metric-value" style="color: var(--amber);" id="metricFPR">{{ ml_f1 }}
+                                    </div>
+                                    <div class="metric-change text-muted">Isolation Forest</div>
+                                </div>
+                                <div class="metric-icon-wrap"
+                                    style="background:rgba(245,158,11,0.1);color:var(--amber);"><i
+                                        class="fas fa-filter"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHARTS ROW  -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-8">
+                        <div class="dash-card">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="card-title mb-0"><i class="fas fa-chart-area"></i> Traffic Volume — Last 24
+                                    Hours</div>
+                                <div class="d-flex gap-1">
+                                    <button class="btn-ghost chart-type-btn active" data-type="line"
+                                        style="padding:2px 10px;font-size:0.6rem;"><i
+                                            class="fas fa-chart-line"></i></button>
+                                    <button class="btn-ghost chart-type-btn" data-type="bar"
+                                        style="padding:2px 10px;font-size:0.6rem;"><i
+                                            class="fas fa-chart-bar"></i></button>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="trafficChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="dash-card">
+                            <div class="card-title"><i class="fas fa-chart-pie"></i> Attack Type Breakdown</div>
+                            <div class="chart-container" style="height: 150px;">
+                                <canvas id="attackChart"></canvas>
+                            </div>
+                            <div id="attackBreakdownList" class="mt-2" style="font-size: 0.72rem;">
+                                <div class="text-center text-muted py-2" style="font-size:0.7rem;">Loading attack
+                                    data...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--ALERTS & LLM  -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="dash-card">
+                            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                <div class="card-title mb-0"><i class="fas fa-bell"></i> Recent Alerts</div>
+                                <div class="search-wrapper">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="alertSearchInput" class="search-input"
+                                        placeholder="Filter alerts...">
+                                </div>
+                            </div>
+                            <div id="alertList" style="max-height: 240px; overflow-y: auto;">
+                                <div class="text-center text-muted py-3" style="font-size:0.8rem;"><i
+                                        class="fas fa-spinner fa-spin me-2"></i>Loading alerts...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="dash-card">
+                            <div class="card-title"><i class="fas fa-robot"></i> LLM Insight (Llama 3.1)</div>
+                            <div class="insight-banner">
+                                <div class="insight-icon"><i class="fas fa-lightbulb"></i></div>
+                                <div class="insight-text" id="llmInsight">
+                                    <strong>AI Analysis:</strong> <span id="insightText">Loading insight...</span>
+                                </div>
+                            </div>
+                            <div class="mt-2 d-flex justify-content-between align-items-center">
+                                <span class="text-muted small" id="llmTimestamp"></span>
+                                <button id="refreshInsightBtn" class="btn-ghost" style="font-size:0.7rem;">
+                                    <i class="fas fa-sync-alt"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RECENT PACKETS -->
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="dash-card">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="card-title mb-0"><i class="fas fa-stream"></i> Recent Packets</div>
+                                <a href="{% url 'packet_search' %}" class="btn-ghost"
+                                    style="font-size:0.65rem;text-decoration:none;">
+                                    View All <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                            <div style="max-height: 220px; overflow-y: auto;">
+                                <table class="pkt-table" id="packetTable">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Timestamp</th>
+                                            <th>Source</th>
+                                            <th>Destination</th>
+                                            <th>Protocol</th>
+                                            <th>Size</th>
+                                            <th>Info</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="packetTableBody">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-3"
+                                                style="font-size:0.8rem;">Loading packets...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FOOTER -->
+                <div class="mt-4 text-center text-muted small">
+                    <hr style="border-color: var(--border-soft);">
+                     <p class="mb-0">Developed by Shree Bahadur Magar · Student ID: 2508454</p>
+                </div>
+
+            </div><!-- /main-content -->
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container-custom" id="toastContainer"></div>
+
+    <!-- UPLOAD PCAP MODAL -->
+    <div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content"
+                style="background:var(--bg-card);color:var(--text-primary);border-color:var(--border-soft);">
+                <div class="modal-header" style="border-color:var(--border-soft);">
+                    <h5 class="modal-title" style="font-size:0.9rem;"><i class="fas fa-file-import me-2"
+                            style="color:var(--cyan);"></i>Upload PCAP</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        style="filter:invert(1) grayscale(100%) brightness(200%);"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <div id="dropZone"
+                                style="border:2px dashed var(--border-soft);border-radius:12px;padding:30px 20px;text-align:center;transition:all 0.3s;cursor:pointer;"
+                                onclick="document.getElementById('pcapFileInput').click()">
+                                <i class="fas fa-cloud-upload-alt fa-2x mb-2" style="color:var(--text-muted);"></i>
+                                <p style="font-size:0.8rem;color:var(--text-secondary);margin:0;">Drop PCAP file here or
+                                    click to browse</p>
+                                <p style="font-size:0.65rem;color:var(--text-muted);margin:4px 0 0 0;">.pcap, .pcapng up
+                                    to 100MB</p>
+                                <input type="file" id="pcapFileInput" class="d-none" name="pcap_file"
+                                    accept=".pcap,.pcapng" required>
+                            </div>
+                            <div id="fileInfo" class="mt-2"
+                                style="display:none;font-size:0.75rem;color:var(--cyan);font-family:var(--font-mono);">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary-cyan w-100" id="uploadSubmitBtn" disabled>
+                            <i class="fas fa-robot me-2"></i>Analyze
+                        </button>
+                    </form>
+                    <div id="uploadStatus" class="mt-3 text-center" style="font-size:0.8rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KEYBOARD SHORTCUTS MODAL -->
+    <div class="modal fade" id="shortcutsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content"
+                style="background:var(--bg-card);color:var(--text-primary);border-color:var(--border-soft);">
+                <div class="modal-header" style="border-color:var(--border-soft);">
+                    <h5 class="modal-title" style="font-size:0.85rem;"><i class="fas fa-keyboard me-2"
+                            style="color:var(--cyan);"></i>Shortcuts</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        style="filter:invert(1) grayscale(100%) brightness(200%);"></button>
+                </div>
+                <div class="modal-body" style="font-size:0.78rem;">
+                    <div class="d-flex justify-content-between mb-2"><span>Refresh</span><span class="kbd"
+                            style="background:var(--input-bg);border:1px solid var(--border-soft);padding:1px 8px;border-radius:4px;font-family:var(--font-mono);">R</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2"><span>Search alerts</span><span
+                            class="kbd">/</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Toggle theme</span><span class="kbd">T</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2"><span>Toggle sidebar</span><span
+                            class="kbd">S</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Upload PCAP</span><span class="kbd">U</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2"><span>Export CSV</span><span class="kbd">E</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'dashboard/js/dashboard.js' %}"></script>
+    <script>
+// Attack Type Breakdown Chart (standalone)
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/dashboard-stats/')
+        .then(r => r.json())
+        .then(data => {
+            const attackData = data.attack_types || [];
+            const canvas = document.getElementById('attackChart');
+            if (!canvas) {
+                console.warn('Attack chart canvas not found');
+                return;
+            }
+
+            // Destroy any existing chart attached to this canvas
+            const existingChart = Chart.getChart(canvas);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            if (attackData.length === 0) {
+                document.getElementById('attackBreakdownList').innerHTML =
+                    '<div class="text-center text-muted py-2">No attack data available</div>';
+                return;
+            }
+
+            const colors = ['#ef4444', '#f59e0b', '#8b5cf6', '#06b6d4', '#22c55e'];
+            const labels = attackData.map(d => d.attack_type);
+            const values = attackData.map(d => d.count);
+
+            const ctx = canvas.getContext('2d');
+            window.attackChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors.slice(0, values.length),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '68%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#b0b8c8',
+                                boxWidth: 10,
+                                font: { size: 8 },
+                                padding: 6
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Update the breakdown list
+            const listContainer = document.getElementById('attackBreakdownList');
+            listContainer.innerHTML = attackData.map((item, index) => `
+                <div class="attack-list-item">
+                    <span><span class="al-dot" style="background: ${colors[index % colors.length]};"></span>${item.attack_type}</span>
+                    <span class="al-count">${item.count}</span>
+                </div>
+            `).join('');
+
+            console.log('Attack chart drawn successfully');
+        })
+        .catch(err => console.error('Attack chart error:', err));
+});
+</script>
+</body>
+</html>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        fetch('/dashboard-stats/')
+            .then(r => r.json())
+            .then(data => {
+                console.log('Dashboard stats loaded:', data);
+                // Update the metrics
+                document.getElementById('metricPackets').textContent = data.total_packets || 0;
+                document.getElementById('metricAnomalies').textContent = data.anomalies || 0;
+                document.getElementById('metricAccuracy').textContent = data.detection_accuracy || 'N/A';
+                document.getElementById('metricFPR').textContent = data.false_positive_rate || 'N/A';
+            })
+            .catch(err => {
+                console.error('❌ Failed to load stats:', err);
+                document.getElementById('alertList').innerHTML = '<div class="text-danger">Error loading data</div>';
+            });
+    });
+</script>
+
+
+<script>
+    // PCAP UPLOAD HANDLER
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const fileInput = document.getElementById('pcapFileInput');
+        const dropZone = document.getElementById('dropZone');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadSubmitBtn = document.getElementById('uploadSubmitBtn');
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadStatus = document.getElementById('uploadStatus');
+        let selectedFile = null;
+
+        //File selection 
+        function handleFileSelect(file) {
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            if (!['.pcap', '.pcapng'].includes(ext)) {
+                alert('Please select a .pcap or .pcapng file.');
+                return;
+            }
+            if (file.size > 100 * 1024 * 1024) {
+                alert('File too large. Maximum size is 100MB.');
+                return;
+            }
+            selectedFile = file;
+            fileInfo.style.display = 'block';
+            fileInfo.innerHTML = `<i class="fas fa-file me-1"></i>${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            uploadSubmitBtn.disabled = false;
+        }
+
+        // Click to browse 
+        fileInput.addEventListener('change', function () {
+            if (this.files.length) {
+                handleFileSelect(this.files[0]);
+            }
+        });
+
+        // Drag and drop
+        dropZone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            this.style.borderColor = 'var(--cyan)';
+        });
+
+        dropZone.addEventListener('dragleave', function (e) {
+            e.preventDefault();
+            this.style.borderColor = '';
+        });
+
+        dropZone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            this.style.borderColor = '';
+            if (e.dataTransfer.files.length) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Submit the form
+        uploadForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!selectedFile) return;
+
+            const formData = new FormData(this);
+            const btn = uploadSubmitBtn;
+            const status = uploadStatus;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            status.innerHTML = '<div class="text-info">Analyzing PCAP... this may take a few seconds.</div>';
+
+            fetch('/upload-pcap/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        status.innerHTML = `
+                        <div class="alert alert-success py-2">
+                            Analysis complete! Found <strong>${data.anomalies || 0}</strong> anomalies.
+                        </div>
+                    `;
+                        // Auto-close modal after 2 seconds
+                        setTimeout(() => {
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
+                            if (modal) modal.hide();
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        status.innerHTML = `
+                        <div class="alert alert-danger py-2">
+                            ${data.message || 'Analysis failed.'}
+                            ${data.traceback ? '<br><small>Check console for details.</small>' : ''}
+                        </div>
+                    `;
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-robot me-2"></i>Analyze';
+                        console.error(data);
+                    }
+                })
+                .catch(err => {
+                    status.innerHTML = '<div class="alert alert-danger py-2">Network error. Please try again.</div>';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-robot me-2"></i>Analyze';
+                    console.error(err);
+                });
+        });
+
+        // --- 5. Reset modal when closed ---
+        document.getElementById('uploadModal').addEventListener('hidden.bs.modal', function () {
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            uploadStatus.innerHTML = '';
+            uploadSubmitBtn.disabled = true;
+            uploadSubmitBtn.innerHTML = '<i class="fas fa-robot me-2"></i>Analyze';
+        });
+
+        console.log('PCAP upload handler loaded');
+    });
+</script>
+
+<script>
+    
+    // LIVE CLOCK
+    function updateClock() {
+        const now = new Date();
+        const clockEl = document.getElementById('liveClock');
+        if (clockEl) {
+            clockEl.textContent = '🕒 ' + now.toLocaleTimeString('en-GB', { hour12: false });
+        }
+    }
+
+    // Update clock immediately and every second
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // UPDATE TIMESTAMP WHEN DATA LOADS
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // The fetch is already there; we can add a line to update timestamp
+        // after the data is loaded, but the existing fetch already does that.
+        // If update is not even when data fails, add this:
+        const timestampEl = document.getElementById('liveTimestamp');
+        if (timestampEl) {
+            timestampEl.textContent = '⏱ Updated: ' + new Date().toLocaleTimeString();
+        }
+    });
+</script>

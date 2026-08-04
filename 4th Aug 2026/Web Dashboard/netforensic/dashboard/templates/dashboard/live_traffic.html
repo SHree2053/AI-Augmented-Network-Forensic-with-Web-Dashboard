@@ -1,0 +1,69 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Live Traffic{% endblock %}
+{% block page_title %}Live Traffic{% endblock %}
+{% block subtitle %}Real‑time network packet capture{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <span class="live-badge"><span class="pulse-dot"></span> Live</span>
+        <span class="text-muted ms-2" style="font-size: 0.75rem;">Updated: {{ now|date:"H:i:s" }}</span>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <!-- this button start captur is used for capturing the live data -->
+        <a href="{% url 'start_capture' %}" class="btn btn-sm btn-success"><i class="fas fa-play"></i> Start Capture</a> 
+        <button id="refreshButton" class="btn btn-sm btn-refresh"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+</div>
+
+<div class="dash-card">
+    <div style="max-height: 70vh; overflow-y: auto;">
+        <table class="table table-forensic table-hover mb-0" style="font-size:0.85rem;">
+            <thead>
+                <tr>
+                    <th style="font-weight:600;color:var(--text-secondary);">Time</th>
+                    <th style="font-weight:600;color:var(--text-secondary);">Source</th>
+                    <th></th>
+                    <th style="font-weight:600;color:var(--text-secondary);">Destination</th>
+                    <th style="font-weight:600;color:var(--text-secondary);">Protocol</th>
+                    <th style="font-weight:600;color:var(--text-secondary);">Length</th>
+                    <th style="font-weight:600;color:var(--text-secondary);">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);">{{ event.timestamp|date:"H:i:s" }}</td>
+                    <td style="font-family:var(--font-mono);color:var(--cyan);">{{ event.src_ip }}</td>
+                    <td class="text-muted" style="color:var(--text-muted);">→</td>
+                    <td style="font-family:var(--font-mono);color:var(--text-secondary);">{{ event.dst_ip }}</td>
+                    <td><span class="proto-badge" style="background:rgba(6,182,212,0.12);color:var(--cyan);">{{ event.protocol }}</span></td>
+                    <td style="font-family:var(--font-mono);color:var(--text-muted);">{{ event.length }}</td>
+                    <td>
+                        {% if event.is_anomaly %}
+                            <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>ATTACK</span>
+                        {% else %}
+                            <span class="badge bg-success">NORMAL</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4" style="font-size:0.85rem;">No traffic data available. Start Live Capture or upload a PCAP.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+   //click event for refrshing the button 
+document.getElementById('')?.addEventListener('click', function() {
+    // showing the spinner while loading the page
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    // this function disabled for multiple clicking from user
+    this.disabled = true;
+     // Wait for 500 milliseconds, then reload the current page
+    setTimeout(() => { location.reload(); }, 500);
+});
+</script>
+{% endblock %}
