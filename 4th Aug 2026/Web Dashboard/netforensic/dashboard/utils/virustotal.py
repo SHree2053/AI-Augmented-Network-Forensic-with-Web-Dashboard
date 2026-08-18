@@ -3,7 +3,12 @@ import requests
 from django.core.cache import cache
 
 #using api key here
-VT_API_KEY = '2ecf88b310d94b41f14de9a4b13dc779066ea71c585540a30791269c7994bcd0'
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+VT_API_KEY = os.getenv('VT_API_KEY')
 VT_IP_URL = 'https://www.virustotal.com/api/v3/ip_addresses/{}'
 VT_HEADERS = {'x-apikey': VT_API_KEY}
 
@@ -22,7 +27,7 @@ def check_ip(ip):
     if cached:
         return cached
     
-    if not VT_API_KEY or VT_API_KEY:
+    if not VT_API_KEY:
         # fallback if not API
         return {
             'score': 0,

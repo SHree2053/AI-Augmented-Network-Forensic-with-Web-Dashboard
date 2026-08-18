@@ -48,7 +48,7 @@ def register(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             return redirect('index')
     else:
         form = RegisterForm()
@@ -168,7 +168,7 @@ def handle_pcap_upload(request):
 
         print(f"Sucessful! Temp file saved: {tmp_path}")
 
-        _, _, _, _, feature_names = load_trained_models()
+        _, _, _, feature_names = load_trained_models()
         if not feature_names:
             if tmp_path and os.path.exists(tmp_path):
                 os.unlink(tmp_path)
@@ -185,7 +185,7 @@ def handle_pcap_upload(request):
 
         predictions = predict_attack_types(features_df)
 
-        for row in predictions.iterrows():
+        for _, row in predictions.iterrows():
             src_ip = row.get('src_ip', '0.0.0.0')
             dst_ip = row.get('dst_ip', '0.0.0.0')
             protocol = row.get('protocol', 'TCP')
@@ -225,10 +225,12 @@ def handle_pcap_upload(request):
         })
     except Exception as e:
         import traceback
+        print(f"Error: {e}")
+        traceback.print_exc()
         if tmp_path and os.path.exists(tmp_path):
             try:
                 os.unlink(tmp_path)
-            except:
+            except Exception:
                 pass
 
         return JsonResponse({
@@ -687,11 +689,14 @@ import re
 @login_required
 def dashboard_stats(request):
     # here total packets and anomolies presetning
+    
+    
     total_packets = NetworkEvent.objects.count()
     anomalies = NetworkEvent.objects.filter(is_anomaly=True).count()
     # here Detection metrics     (yet to change as per )
-    detection_accuracy = ""
-    false_positive_rate = ""
+    detection_accuracy = "99.89" #written from model trained 
+    false_positive_rate = "8.70" #evaluated form the isolation forest 
+   
     # calcualtin the number of packet growth
     now = timezone.now()
     last_hour = now - timedelta(hours=1)
@@ -1027,6 +1032,22 @@ def evaluation(request):
 
         # Predict
         y_pred = multiclass_model.predict(X_scaled)
+
+
+
+        if iso_model is not None:
+            y_pred_iso = iso_model.predict(X_scaled)
+
+            print("\nISOLATION FOREST")
+            print("Isolation Forest is working!")
+            print("Total samples:", len(y_pred_iso))
+            print("Normal:", np.sum(y_pred_iso == 1))
+            print("Anomalies:", np.sum(y_pred_iso == -1))
+        else:
+            print("\nIsolation Forest is NOT available!")
+            prec = precision_score(y_encoded, y_pred, average='weighted') * 100
+            rec = recall_score(y_encoded, y_pred, average='weighted') * 100
+            f1 = f1_score(y_encoded, y_pred, average='weighted') * 100
 
         # computing metrics
         acc = accuracy_score(y_encoded, y_pred) * 100

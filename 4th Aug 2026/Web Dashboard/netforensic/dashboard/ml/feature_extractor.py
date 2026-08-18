@@ -155,7 +155,7 @@ def parse_pcap_to_features(pcap_path, feature_names=None):
 
     # calculating the features flow
     rows = []
-    for flow in flows.items():
+    for _, flow in flows.items():
         total_packets = len(flow['packets'])
         if total_packets == 0:
             continue
@@ -290,10 +290,17 @@ def parse_pcap_to_features(pcap_path, feature_names=None):
     df = pd.DataFrame(rows)
 
     if feature_names:
+        metadata_cols = ['src_ip', 'dst_ip', 'protocol', 'length']
+
         for col in feature_names:
             if col not in df.columns:
                 df[col] = 0.0
-        df = df[feature_names]
+        # Keep the 78 ML features PLUS network metadata
+        columns_to_keep = feature_names + [
+            col for col in metadata_cols
+            if col not in feature_names
+            ]
+        df = df[columns_to_keep]
     else:
         print("No feature_names provided; returning all computed features.")
 

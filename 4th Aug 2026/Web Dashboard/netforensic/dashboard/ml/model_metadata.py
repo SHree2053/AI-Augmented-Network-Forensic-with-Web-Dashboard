@@ -130,8 +130,16 @@ def compute_metrics_from_models():
 
         # isolaiton fores evaluations
         if iso_model is not None:
+            print("Isolation Forest is working!")
+
             y_pred_iso = iso_model.predict(X_scaled)
+
+            print("Total samples:", len(y_pred_iso))
+            print("Normal:", np.sum(y_pred_iso == 1))
+            print("Anomalies:", np.sum(y_pred_iso == -1))
+
             y_pred_iso_mapped = np.where(y_pred_iso == -1, 1, 0)
+
 
             benign_class = None
             for cls in encoder_classes:

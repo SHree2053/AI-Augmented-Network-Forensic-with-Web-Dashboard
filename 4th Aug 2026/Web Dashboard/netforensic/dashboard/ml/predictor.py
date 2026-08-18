@@ -55,56 +55,118 @@ def load_trained_models():
 
 #function used  for attack types
 def predict_attack_types(features_df):
-#Predict attack types using the multi-class XGBoost model.
-#Returns DataFrame with is anamoly and attack type columns.
+    # Predict attack types using XGBoost and detect anomalies using Isolation Forest.
+
     global _binary_model, _multiclass_model, _iso_model, _scaler, _feature_names
 
-    # loading models if not 
+    # Load models if not already loaded
     if _feature_names is None:
-        _, _, _, _, _feature_names = load_trained_models()
+        load_trained_models()
 
-    # aliging datafreame to feaures
+    # Align dataframe with the features used during training
     X = features_df[_feature_names].copy()
 
-    # chceking for scalar file
+    # Scale the features
     if _scaler is not None:
         X_scaled = _scaler.transform(X)
     else:
         X_scaled = X.values
 
-    # loading lable encoder file
+    # Load label encoder
     encoder_path = os.path.join(MODELS_DIR, 'label_encoder.pkl')
+
     if not os.path.exists(encoder_path):
-        raise FileNotFoundError(f"Label encoder not found: {encoder_path}")
+        raise FileNotFoundError(
+            f"Label encoder not found: {encoder_path}"
+        )
 
     le = joblib.load(encoder_path)
 
-    # checking if multiclass model is not uploaded
     if _multiclass_model is None:
-        multiclass_path = os.path.join(MODELS_DIR, 'xgboost_multiclass.pkl')
+        multiclass_path = os.path.join(
+            MODELS_DIR, 'xgboost_multiclass.pkl'
+        )
         _multiclass_model = joblib.load(multiclass_path)
 
-    # variables defined for prediction
+    # Predict attack class
     preds_encoded = _multiclass_model.predict(X_scaled)
+
+    # Convert numerical predictions back to attack names
     attack_types = le.inverse_transform(preds_encoded)
 
-    # Binary detection anything is not benign is anomaly
-    is_anomaly = (attack_types != 'Benign')
+    # XGBoost considers anything other than Benign as an attack
+    preds_encoded = _multiclass_model.predict(X_scaled)
+    attack_types = le.inverse_transform(preds_encoded)
+   
+   # XGBoost anomaly detection
+    xgb_anomaly = (attack_types != 'Benign')
 
-    # Create result DataFrame with ALL columns from features_df
+    # Isolation Forest anomaly detection
+    if _iso_model is not None:
+        iso_predictions = _iso_model.predict(X_scaled)
+        iso_anomaly = (iso_predictions == -1)
+    else:
+        iso_anomaly = np.zeros(len(X_scaled), dtype=bool)
+
+    # Hybrid detection
+    is_anomaly = xgb_anomaly | iso_anomaly
+
+# If Isolation Forest detects an anomaly but XGBoost says Benign
+    attack_types = np.where(
+        (attack_types == 'Benign') & iso_anomaly,
+        'Unknown Anomaly',
+        attack_types
+        )
+
+    if _iso_model is not None:
+        iso_pred = _iso_model.predict(X_scaled)
+        iso_anomaly = (iso_pred == -1)
+    else:
+
+        iso_pred = np.ones(len(X_scaled))
+        iso_anomaly = np.zeros(len(X_scaled), dtype=bool)
+    is_anomaly = xgb_anomaly | iso_anomaly
+    
+
+    # Create result dataframe
     result_df = features_df.copy()
+
+    result_df['xgb_anomaly'] = xgb_anomaly
+    result_df['iso_anomaly'] = iso_anomaly
     result_df['is_anomaly'] = is_anomaly
     result_df['attack_type'] = attack_types
 
-    #  adding the placerholder if not exist
+    print("\nHYBRID ML RESULT")
+    print(f"Total flows: {len(result_df)}")
+    print(f"XGBoost anomalies: {xgb_anomaly.sum()}")
+    print(f"Isolation Forest anomalies: {iso_anomaly.sum()}")
+    print(f"Hybrid anomalies: {is_anomaly.sum()}")
+
+    # Store Isolation Forest result
+    result_df['isolation_prediction'] = iso_pred
+
+    # Store individual model decisions
+    result_df['xgboost_anomaly'] = xgb_anomaly
+    result_df['isolation_anomaly'] = iso_anomaly
+
+    # Add metadata columns if they do not exist
     for col in ['src_ip', 'dst_ip', 'protocol', 'length']:
         if col not in result_df.columns:
-            result_df[col] = '0.0.0.0' if col in ['src_ip', 'dst_ip'] else ('TCP' if col == 'protocol' else 0)
+            result_df[col] = (
+                '0.0.0.0'
+                if col in ['src_ip', 'dst_ip']
+                else ('TCP' if col == 'protocol' else 0)
+            )
 
-    # Metrics for predications
-    print(f"Prediction summary:")
+    # Prediction summary
+    print("Prediction summary:")
     print(f"   - Total flows: {len(result_df)}")
-    print(f"   - Anomalies: {is_anomaly.sum()}")
-    print(f"   - Attack types: {pd.Series(attack_types).value_counts().to_dict()}")
+    print(f"   - XGBoost anomalies: {xgb_anomaly.sum()}")
+    print(f"   - Isolation Forest anomalies: {iso_anomaly.sum()}")
+    print(f"   - Combined anomalies: {is_anomaly.sum()}")
+    print(
+        f"   - Attack types: "
+        f"{pd.Series(attack_types).value_counts().to_dict()}"
+    )
 
     return result_df

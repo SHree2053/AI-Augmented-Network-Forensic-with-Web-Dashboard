@@ -481,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('metricFPR').textContent = data.false_positive_rate || 'N/A';
             })
             .catch(err => {
-                console.error('❌ Failed to load stats:', err);
+                console.error('Failed to load stats:', err);
                 document.getElementById('alertList').innerHTML = '<div class="text-danger">Error loading data</div>';
             });
     });
@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
 
-        // --- 5. Reset modal when closed ---
+        // Reset modal when closed 
         document.getElementById('uploadModal').addEventListener('hidden.bs.modal', function () {
             selectedFile = null;
             fileInput.value = '';
@@ -627,9 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateClock, 1000);
 
     // UPDATE TIMESTAMP WHEN DATA LOADS
-
     document.addEventListener('DOMContentLoaded', function () {
-        // The fetch is already there; we can add a line to update timestamp
         // after the data is loaded, but the existing fetch already does that.
         // If update is not even when data fails, add this:
         const timestampEl = document.getElementById('liveTimestamp');

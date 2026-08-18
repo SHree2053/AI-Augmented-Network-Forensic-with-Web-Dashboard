@@ -4,6 +4,3 @@ Steps to install ollama on windows
 3. ollama pull llama3.2:3b
 4. ollama run llama3.2
 5. ollama list
-
-api key from virus total: 
-2ecf88b310d94b41f14de9a4b13dc779066ea71c585540a30791269c7994bcd0
