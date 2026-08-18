@@ -16,10 +16,7 @@ xgboost==2.1.1
 
 # Packet analysis
 scapy==2.6.0
-dpkt==1.9.8
-
 
 python-dotenv==1.0.1
-
 # Excel support
 openpyxl==3.1.5
